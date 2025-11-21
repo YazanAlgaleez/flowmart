@@ -7,4 +7,5 @@ class AppRoutes {
   static const String onboarding = '/onbordar';
   static const String test = '/test';
   static const String spacingWidgets = '/spacing-widgets';
+  static const String search = '/search';
 }

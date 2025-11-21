@@ -1,10 +1,13 @@
 import 'dart:ui';
 
+import 'package:flowmart/core/providers/theme_provider.dart';
 import 'package:flowmart/core/styling/app_colors.dart';
 import 'package:flowmart/core/styling/app_fonts.dart';
 import 'package:flowmart/core/styling/app_styles.dart';
+import 'package:flowmart/core/styling/app_themes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
 
 class AppbarWidget extends StatelessWidget implements PreferredSizeWidget {
   final String? title;
@@ -13,6 +16,7 @@ class AppbarWidget extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    // App bar maintains FlowMart's visual identity with consistent branding
     return AppBar(
       centerTitle: true,
       title: Text(
@@ -27,6 +31,8 @@ class AppbarWidget extends StatelessWidget implements PreferredSizeWidget {
       ),
       backgroundColor: AppColors.primaryColor,
       iconTheme: IconThemeData(color: AppColors.whiteColor),
+      elevation: 4,
+      shadowColor: AppColors.primaryColor.withOpacity(0.3),
     );
   }
 

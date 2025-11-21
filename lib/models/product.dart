@@ -6,6 +6,7 @@ class Product {
   final String imageUrl;
   final String? videoUrl;
   final String description;
+  final bool inStock;
 
   Product({
     required this.id,
@@ -15,6 +16,7 @@ class Product {
     required this.imageUrl,
     this.videoUrl,
     required this.description,
+    this.inStock = true,
   });
 
   double get discountedPrice =>

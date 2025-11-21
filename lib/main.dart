@@ -1,12 +1,12 @@
-import 'package:flowmart/pages/home_page.dart';
-import 'package:flowmart/pages/onBordar_page.dart';
-import 'package:flowmart/pages/register_page.dart';
-import 'package:flowmart/pages/search_page.dart';
-
+import 'package:flowmart/core/providers/theme_provider.dart';
+import 'package:flowmart/core/providers/product_provider.dart';
+import 'package:flowmart/core/routing/routing_genrtion_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
 
@@ -16,9 +16,23 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return ScreenUtilInit(
-      designSize: const Size(390, 844),
-      child: MaterialApp(debugShowCheckedModeBanner: false, home: HomePage()),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => ProductProvider()),
+      ],
+      child: ScreenUtilInit(
+        designSize: const Size(390, 844),
+        child: Consumer<ThemeProvider>(
+          builder: (context, themeProvider, child) {
+            return MaterialApp.router(
+              debugShowCheckedModeBanner: false,
+              theme: themeProvider.themeData,
+              routerConfig: AppRouter.router,
+            );
+          },
+        ),
+      ),
     );
   }
 }

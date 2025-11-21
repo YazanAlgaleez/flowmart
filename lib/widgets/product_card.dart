@@ -1,5 +1,6 @@
 import 'package:flowmart/core/styling/app_colors.dart';
 import 'package:flowmart/core/styling/app_fonts.dart';
+import 'package:flowmart/core/styling/app_styles.dart';
 import 'package:flowmart/models/product.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -8,9 +9,9 @@ import 'package:video_player/video_player.dart';
 class ProductCard extends StatefulWidget {
   final Product product;
   final bool isLiked;
-  final bool isInCart;
+  final bool isInCart; // <-- الاسم الأصلي
   final VoidCallback onLike;
-  final VoidCallback onAddToCart;
+  final VoidCallback onAddToCart; // <-- الاسم الأصلي
   final VoidCallback onComment;
 
   const ProductCard({
@@ -90,10 +91,9 @@ class _ProductCardState extends State<ProductCard> {
             children: [
               Text(
                 widget.product.name,
-                style: TextStyle(
+                style: AppStyles.getTextStyle(
                   color: Colors.white,
-                  fontSize: 24.sp,
-                  fontFamily: AppFonts.mainFontName,
+                  fontSize: 24,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -102,10 +102,9 @@ class _ProductCardState extends State<ProductCard> {
                 children: [
                   Text(
                     '\$${widget.product.discountedPrice.toStringAsFixed(2)}',
-                    style: TextStyle(
+                    style: AppStyles.getTextStyle(
                       color: Colors.white,
-                      fontSize: 20.sp,
-                      fontFamily: AppFonts.mainFontName,
+                      fontSize: 20,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -113,10 +112,9 @@ class _ProductCardState extends State<ProductCard> {
                     SizedBox(width: 8.w),
                     Text(
                       '\$${widget.product.price.toStringAsFixed(2)}',
-                      style: TextStyle(
+                      style: AppStyles.getTextStyle(
                         color: Colors.white70,
-                        fontSize: 16.sp,
-                        fontFamily: AppFonts.mainFontName,
+                        fontSize: 16,
                         decoration: TextDecoration.lineThrough,
                       ),
                     ),
@@ -132,16 +130,33 @@ class _ProductCardState extends State<ProductCard> {
                       ),
                       child: Text(
                         '${(widget.product.discount! * 100).toInt()}% OFF',
-                        style: TextStyle(
+                        style: AppStyles.getTextStyle(
                           color: Colors.white,
-                          fontSize: 12.sp,
-                          fontFamily: AppFonts.mainFontName,
+                          fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
                   ],
                 ],
+              ),
+              SizedBox(height: 4.h),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                decoration: BoxDecoration(
+                  color: widget.product.inStock
+                      ? Colors.green.withOpacity(0.8)
+                      : Colors.grey.withOpacity(0.8),
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+                child: Text(
+                  widget.product.inStock ? 'Available' : 'Out of stock',
+                  style: AppStyles.getTextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
             ],
           ),
@@ -166,10 +181,9 @@ class _ProductCardState extends State<ProductCard> {
                     SizedBox(height: 4.h),
                     Text(
                       'Like',
-                      style: TextStyle(
+                      style: AppStyles.getTextStyle(
                         color: Colors.white,
-                        fontSize: 12.sp,
-                        fontFamily: AppFonts.mainFontName,
+                        fontSize: 12,
                       ),
                     ),
                   ],
@@ -177,30 +191,63 @@ class _ProductCardState extends State<ProductCard> {
               ),
               SizedBox(height: 20.h),
 
-              // Add to Cart Button
-              GestureDetector(
-                onTap: widget.onAddToCart,
-                child: Column(
-                  children: [
-                    Icon(
-                      widget.isInCart
-                          ? Icons.shopping_cart
-                          : Icons.add_shopping_cart,
-                      color: widget.isInCart
-                          ? AppColors.primaryColor
-                          : Colors.white,
-                      size: 40.sp,
-                    ),
-                    SizedBox(height: 4.h),
-                    Text(
-                      'Cart',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12.sp,
-                        fontFamily: AppFonts.mainFontName,
+              // Chat Button (الذي يستخدم متغيرات onAddToCart)
+              Draggable<String>(
+                data: widget.product.id,
+                feedback: Container(
+                  width: 60.w,
+                  height: 60.h,
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryColor.withOpacity(0.8),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.chat_bubble_outline, // <-- 1. الأيقونة معدلة
+                    color: Colors.white,
+                    size: 30.sp,
+                  ),
+                ),
+                childWhenDragging: Container(
+                  width: 50.w,
+                  height: 50.h,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.chat_bubble_outline, // <-- 2. الأيقونة معدلة
+                    color: Colors.grey,
+                    size: 25.sp,
+                  ),
+                ),
+                onDragEnd: (details) {
+                  if (details.offset.dy >
+                      MediaQuery.of(context).size.height * 0.8) {
+                    widget.onAddToCart(); // <-- 3. تستخدم الاسم القديم
+                  }
+                },
+                child: GestureDetector(
+                  onTap: widget.onAddToCart, // <-- 4. تستخدم الاسم القديم
+                  onLongPress: widget.onAddToCart, // <-- 5. تستخدم الاسم القديم
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.chat_bubble_outline, // <-- 6. الأيقونة معدلة
+                        color: widget.isInCart
+                            ? AppColors.primaryColor
+                            : Colors.white,
+                        size: 40.sp,
                       ),
-                    ),
-                  ],
+                      SizedBox(height: 4.h),
+                      Text(
+                        'Chat', // <-- 7. النص معدل
+                        style: AppStyles.getTextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               SizedBox(height: 20.h),
@@ -214,10 +261,9 @@ class _ProductCardState extends State<ProductCard> {
                     SizedBox(height: 4.h),
                     Text(
                       'Comment',
-                      style: TextStyle(
+                      style: AppStyles.getTextStyle(
                         color: Colors.white,
-                        fontSize: 12.sp,
-                        fontFamily: AppFonts.mainFontName,
+                        fontSize: 12,
                       ),
                     ),
                   ],
