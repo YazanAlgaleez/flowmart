@@ -1,7 +1,7 @@
 import 'package:flowmart/core/providers/theme_provider.dart';
 import 'package:flowmart/core/styling/app_themes.dart';
 import 'package:flowmart/core/widgets/appbar_widget.dart';
-import 'package:flowmart/widgets/watermark_widget.dart';
+import 'package:flowmart/core/widgets/watermark_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 

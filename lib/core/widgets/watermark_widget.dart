@@ -20,7 +20,7 @@ class WatermarkWidget extends StatelessWidget {
             shadows: [
               Shadow(
                 blurRadius: 2.0,
-                color: Colors.black,
+                color: Colors.deepPurpleAccent.shade400,
                 offset: Offset(1.0, 1.0),
               ),
             ],

@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "825687003647",
+    "project_id": "smart-ai-product-app-7ab96",
+    "storage_bucket": "smart-ai-product-app-7ab96.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:825687003647:android:2aef33cb3c979d77d7d7ca",
+        "android_client_info": {
+          "package_name": "com.example.flowmart"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "825687003647-k61msbdua3ko99mntc7n1evnajj9trf6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDFBZOo7O-4dLvLRGgJxCQyyX6rbKwR2-U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "825687003647-k61msbdua3ko99mntc7n1evnajj9trf6.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "825687003647-n18r3pqcijo0j94nvnjka0trbc3tajb8.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.flowmart"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

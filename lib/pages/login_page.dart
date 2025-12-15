@@ -5,8 +5,8 @@ import 'package:flowmart/core/styling/app_themes.dart';
 import 'package:flowmart/core/widgets/appbar_widget.dart';
 import 'package:flowmart/core/widgets/primary_button_widget.dart';
 import 'package:flowmart/core/widgets/primary_textfield_widget.dart';
-import 'package:flowmart/widgets/social_login_sction.dart';
-import 'package:flowmart/widgets/watermark_widget.dart';
+import 'package:flowmart/core/widgets/social_login_sction.dart';
+import 'package:flowmart/core/widgets/watermark_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
@@ -29,10 +29,10 @@ class LoginPage extends StatelessWidget {
           ? const Color(0xFFFFF0F5)
           : Colors.white,
       body: Positioned.fill(
-        child: SingleChildScrollView(
-          child: Stack(
-            children: [
-              Column(
+        child: Stack(
+          children: [
+            SingleChildScrollView(
+              child: Column(
                 children: [
                   Padding(padding: EdgeInsets.only(top: 50.0)),
                   Text(
@@ -99,12 +99,12 @@ class LoginPage extends StatelessWidget {
                       context.go(AppRoutes.register);
                     },
                   ),
-
-                  const WatermarkWidget(),
                 ],
               ),
-            ],
-          ),
+            ),
+
+            const WatermarkWidget(),
+          ],
         ),
       ),
     );
