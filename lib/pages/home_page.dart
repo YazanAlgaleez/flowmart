@@ -6,7 +6,7 @@ import 'package:flowmart/core/widgets/home_top_bar.dart';
 import 'package:flowmart/core/widgets/product_card.dart';
 import 'package:flowmart/core/widgets/watermark_widget.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
+
 import 'package:provider/provider.dart';
 
 class HomePage extends StatefulWidget {
@@ -31,8 +31,8 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: isDark
           ? const Color(0xFF0D0D0D)
           : isGirlie
-          ? const Color(0xFFFFF0F5)
-          : Colors.white,
+              ? const Color(0xFFFFF0F5)
+              : Colors.white,
       body: Stack(
         children: [
           // Vertical PageView for products
