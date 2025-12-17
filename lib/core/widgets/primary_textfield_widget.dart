@@ -4,8 +4,13 @@ import 'package:flutter/material.dart';
 class PrimaryTextfieldWidget extends StatelessWidget {
   final String? hintText;
   final TextInputType keyboardType;
-
+final TextEditingController? controller;
+  final String? Function(String?)? validator;
+ 
   const PrimaryTextfieldWidget({
+this.controller,
+this.validator,
+
     super.key,
     this.hintText,
     this.keyboardType = TextInputType.text,
@@ -16,7 +21,11 @@ class PrimaryTextfieldWidget extends StatelessWidget {
     return SizedBox(
       height: 56,
       width: 331,
-      child: TextField(
+      child: TextFormField(
+        
+        controller: controller,
+        validator: validator,
+
         keyboardType: keyboardType,
         obscureText: keyboardType == TextInputType.visiblePassword,
         decoration: InputDecoration(
@@ -31,6 +40,7 @@ class PrimaryTextfieldWidget extends StatelessWidget {
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 10,
             vertical: 8,
+            
           ),
         ),
         style: const TextStyle(color: Colors.black, fontSize: 16),

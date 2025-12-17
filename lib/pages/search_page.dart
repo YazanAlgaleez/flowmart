@@ -2,9 +2,9 @@ import 'package:flowmart/core/providers/theme_provider.dart';
 import 'package:flowmart/core/styling/app_colors.dart';
 import 'package:flowmart/core/styling/app_fonts.dart';
 import 'package:flowmart/core/styling/app_themes.dart';
-import 'package:flowmart/core/widgets/drawer_widget.dart';
+import 'package:flowmart/core/widgets/drawer_widget.dart'; // إذا لم تكن مستخدمة يمكن حذفها
 import 'package:flowmart/models/product.dart';
-import 'package:flowmart/core/widgets/home_top_bar.dart';
+import 'package:flowmart/core/widgets/home_top_bar.dart'; // إذا لم تكن مستخدمة يمكن حذفها
 import 'package:flowmart/core/widgets/product_card.dart';
 import 'package:flowmart/core/widgets/watermark_widget.dart';
 import 'package:flutter/material.dart';
@@ -29,10 +29,14 @@ class _SearchPageState extends State<SearchPage> {
   void initState() {
     super.initState();
     _loadProducts();
+    // إضافة مستمع لتحديث زر المسح (X) عند الكتابة
+    _searchController.addListener(() {
+      setState(() {});
+    });
   }
 
   void _loadProducts() {
-    // Mock product data - in real app, this would come from API
+    // Mock Data
     _allProducts = [
       Product(
         id: '1',
@@ -90,6 +94,9 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   void _performSearch(String query) {
+    // إخفاء الكيبورد عند البدء بالبحث
+    FocusScope.of(context).unfocus();
+
     if (query.isEmpty) {
       setState(() {
         _filteredProducts = [];
@@ -100,45 +107,58 @@ class _SearchPageState extends State<SearchPage> {
 
     setState(() {
       _isLoading = true;
+      _hasSearched = true; // نعتبر أن المستخدم بحث حتى لو لم تظهر نتائج بعد
     });
 
     // Simulate API call delay
     Future.delayed(const Duration(milliseconds: 500), () {
-      final results = _allProducts
-          .where(
-            (product) =>
-                product.name.toLowerCase().contains(query.toLowerCase()) &&
-                product.inStock,
-          )
-          .toList();
+      final results = _allProducts.where((product) {
+        final queryLower = query.toLowerCase();
+        final nameLower = product.name.toLowerCase();
+        // يمكن إضافة البحث في الوصف أيضاً
+        return nameLower.contains(queryLower) && product.inStock;
+      }).toList();
 
-      setState(() {
-        _filteredProducts = results;
-        _isLoading = false;
-        _hasSearched = true;
-      });
+      if (mounted) {
+        setState(() {
+          _filteredProducts = results;
+          _isLoading = false;
+        });
+      }
     });
   }
 
+  void _clearSearch() {
+    _searchController.clear();
+    _performSearch('');
+  }
+
+  // --- Actions ---
   void _onLike(String productId) {
-    // Handle like functionality
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Liked product $productId')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Liked product $productId'),
+        duration: const Duration(seconds: 1),
+      ),
+    );
   }
 
   void _onAddToCart(String productId) {
-    // Handle add to cart functionality
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Added product $productId to cart')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Added product $productId to cart'),
+        duration: const Duration(seconds: 1),
+      ),
+    );
   }
 
   void _onComment(String productId) {
-    // Handle comment functionality
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Comment for product $productId')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Comment for product $productId'),
+        duration: const Duration(seconds: 1),
+      ),
+    );
   }
 
   @override
@@ -147,85 +167,97 @@ class _SearchPageState extends State<SearchPage> {
     final isDark = themeProvider.currentTheme == AppTheme.dark;
     final isGirlie = themeProvider.currentTheme == AppTheme.girlie;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: TextField(
-          controller: _searchController,
-          style: TextStyle(
-            color: isDark
-                ? Colors.white
-                : isGirlie
-                ? const Color(0xFF8B008B)
-                : AppColors.blackColor,
-            fontSize: 16.sp,
-            fontFamily: AppFonts.mainFontName,
-          ),
-          decoration: InputDecoration(
-            hintText: 'Search for a product',
-            hintStyle: TextStyle(
-              color: isDark
-                  ? Colors.white.withOpacity(0.7)
-                  : isGirlie
-                  ? const Color(0xFFDA70D6)
-                  : AppColors.secondaryColor,
+    // --- تعريف الألوان مرة واحدة لتنظيف الكود ---
+    final Color backgroundColor = isDark
+        ? const Color(0xFF0D0D0D)
+        : isGirlie
+        ? const Color(0xFFFFF0F5)
+        : AppColors.whiteColor;
+
+    final Color appBarColor = isDark
+        ? const Color(0xFF1A1A1A)
+        : isGirlie
+        ? const Color(0xFFFF69B4)
+        : Colors.blue;
+
+    final Color iconColor = isDark
+        ? Colors.white
+        : isGirlie
+        ? const Color(0xFF8B008B)
+        : Colors.white; // أيقونة العودة والبحث
+
+    final Color textColor = isDark
+        ? Colors.white
+        : isGirlie
+        ? const Color(0xFF8B008B)
+        : AppColors.blackColor;
+
+    final Color hintColor = isDark
+        ? Colors.white.withOpacity(0.7)
+        : isGirlie
+        ? const Color(0xFFDA70D6)
+        : AppColors.secondaryColor;
+
+    return GestureDetector(
+      // إغلاق الكيبورد عند النقر في أي مكان فارغ
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
+        backgroundColor: backgroundColor,
+        appBar: AppBar(
+          backgroundColor: appBarColor,
+          iconTheme: IconThemeData(color: iconColor),
+          title: TextField(
+            controller: _searchController,
+            textInputAction: TextInputAction.search, // زر البحث في الكيبورد
+            style: TextStyle(
+              color: textColor,
               fontSize: 16.sp,
               fontFamily: AppFonts.mainFontName,
             ),
-            prefixIcon: Icon(
-              Icons.search,
-              color: isDark
-                  ? Colors.white
-                  : isGirlie
-                  ? const Color(0xFF8B008B)
-                  : AppColors.secondaryColor,
-              size: 24.sp,
+            decoration: InputDecoration(
+              hintText: 'Search for a product...',
+              hintStyle: TextStyle(
+                color: hintColor,
+                fontSize: 16.sp,
+                fontFamily: AppFonts.mainFontName,
+              ),
+              border: InputBorder.none,
+              // أيقونة البحث
+              prefixIcon: Icon(
+                Icons.search,
+                color: iconColor.withOpacity(0.7), // شفافية قليلة
+                size: 24.sp,
+              ),
+              // زر المسح (X)
+              suffixIcon: _searchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: Icon(Icons.clear, color: iconColor),
+                      onPressed: _clearSearch,
+                    )
+                  : null,
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 20.w,
+                vertical: 12.h,
+              ),
             ),
-            border: InputBorder.none,
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: 20.w,
-              vertical: 15.h,
+            onSubmitted: _performSearch,
+          ),
+        ),
+        body: Stack(
+          children: [
+            Column(
+              children: [Expanded(child: _buildResults(isDark, isGirlie))],
             ),
-          ),
-          onSubmitted: _performSearch,
+            const WatermarkWidget(),
+          ],
         ),
-        backgroundColor: isDark
-            ? const Color(0xFF1A1A1A)
-            : isGirlie
-            ? const Color(0xFFFF69B4)
-            : Colors.blue,
-        iconTheme: IconThemeData(
-          color: isDark
-              ? Colors.white
-              : isGirlie
-              ? const Color(0xFF8B008B)
-              : Colors.white,
-        ),
-      ),
-
-      backgroundColor: isDark
-          ? const Color(0xFF0D0D0D)
-          : isGirlie
-          ? const Color(0xFFFFF0F5)
-          : AppColors.whiteColor,
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              // Search Bar
-
-              // Results
-              Expanded(child: _buildResults()),
-            ],
-          ),
-          const WatermarkWidget(),
-        ],
       ),
     );
   }
 
-  Widget _buildResults() {
-    if (!_hasSearched) {
-      return _buildInitialState();
+  Widget _buildResults(bool isDark, bool isGirlie) {
+    if (!_hasSearched && _searchController.text.isEmpty) {
+      return _buildInitialState(isDark, isGirlie);
     }
 
     if (_isLoading) {
@@ -233,9 +265,10 @@ class _SearchPageState extends State<SearchPage> {
     }
 
     if (_filteredProducts.isEmpty) {
-      return _buildNoResultsState();
+      return _buildNoResultsState(isDark, isGirlie);
     }
 
+    // استخدام PageView لعرض نمط الـ TikTok أو التمرير العمودي لكل منتج
     return PageView.builder(
       scrollDirection: Axis.vertical,
       itemCount: _filteredProducts.length,
@@ -245,6 +278,10 @@ class _SearchPageState extends State<SearchPage> {
           key: Key(product.id),
           direction: DismissDirection.endToStart,
           onDismissed: (direction) {
+            // حذفنا العنصر من القائمة الظاهرة لتجنب خطأ الـ Dismissible
+            setState(() {
+              _filteredProducts.removeAt(index);
+            });
             _onAddToCart(product.id);
           },
           background: Container(
@@ -269,18 +306,16 @@ class _SearchPageState extends State<SearchPage> {
           ),
           child: GestureDetector(
             onDoubleTap: () => _onLike(product.id),
+            // منطق السحب للأعلى لفتح التفاصيل (يمكن تفعيله إذا كان هناك صفحة تفاصيل)
             onVerticalDragEnd: (details) {
               if (details.primaryVelocity! < -500) {
-                // Swipe up - open product details
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Open details for ${product.name}')),
-                );
+                // Swipe up logic
               }
             },
             child: ProductCard(
               product: product,
-              isLiked: false, // In real app, check from state
-              isInCart: false, // In real app, check from state
+              isLiked: false,
+              isInCart: false,
               onLike: () => _onLike(product.id),
               onAddToCart: () => _onAddToCart(product.id),
               onComment: () => _onComment(product.id),
@@ -291,38 +326,30 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  Widget _buildInitialState() {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final isDark = themeProvider.currentTheme == AppTheme.dark;
-    final isGirlie = themeProvider.currentTheme == AppTheme.girlie;
+  Widget _buildInitialState(bool isDark, bool isGirlie) {
+    final color = isDark
+        ? Colors.white.withOpacity(0.5)
+        : isGirlie
+        ? const Color(0xFFDA70D6).withOpacity(0.5)
+        : AppColors.secondaryColor.withOpacity(0.5);
 
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.search,
-            color: isDark
-                ? Colors.white.withOpacity(0.5)
-                : isGirlie
-                ? const Color(0xFFDA70D6).withOpacity(0.5)
-                : AppColors.secondaryColor.withOpacity(0.5),
-            size: 80.sp,
-          ),
-          SizedBox(height: 20.h),
-          Text(
-            'Search for products',
-            style: TextStyle(
-              color: isDark
-                  ? Colors.white.withOpacity(0.7)
-                  : isGirlie
-                  ? const Color(0xFFDA70D6).withOpacity(0.7)
-                  : AppColors.secondaryColor.withOpacity(0.7),
-              fontSize: 18.sp,
-              fontFamily: AppFonts.mainFontName,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search, color: color, size: 80.sp),
+            SizedBox(height: 20.h),
+            Text(
+              'Search for products',
+              style: TextStyle(
+                color: color.withOpacity(0.7),
+                fontSize: 18.sp,
+                fontFamily: AppFonts.mainFontName,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -335,51 +362,39 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  Widget _buildNoResultsState() {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final isDark = themeProvider.currentTheme == AppTheme.dark;
-    final isGirlie = themeProvider.currentTheme == AppTheme.girlie;
+  Widget _buildNoResultsState(bool isDark, bool isGirlie) {
+    final color = isDark
+        ? Colors.white.withOpacity(0.5)
+        : isGirlie
+        ? const Color(0xFFDA70D6).withOpacity(0.5)
+        : AppColors.secondaryColor.withOpacity(0.5);
 
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.search_off,
-            color: isDark
-                ? Colors.white.withOpacity(0.5)
-                : isGirlie
-                ? const Color(0xFFDA70D6).withOpacity(0.5)
-                : AppColors.secondaryColor.withOpacity(0.5),
-            size: 80.sp,
-          ),
-          SizedBox(height: 20.h),
-          Text(
-            'No products found',
-            style: TextStyle(
-              color: isDark
-                  ? Colors.white.withOpacity(0.7)
-                  : isGirlie
-                  ? const Color(0xFFDA70D6).withOpacity(0.7)
-                  : AppColors.secondaryColor.withOpacity(0.7),
-              fontSize: 18.sp,
-              fontFamily: AppFonts.mainFontName,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search_off, color: color, size: 80.sp),
+            SizedBox(height: 20.h),
+            Text(
+              'No products found',
+              style: TextStyle(
+                color: color.withOpacity(0.7),
+                fontSize: 18.sp,
+                fontFamily: AppFonts.mainFontName,
+              ),
             ),
-          ),
-          SizedBox(height: 10.h),
-          Text(
-            'Try different keywords',
-            style: TextStyle(
-              color: isDark
-                  ? Colors.white.withOpacity(0.5)
-                  : isGirlie
-                  ? const Color(0xFFDA70D6).withOpacity(0.5)
-                  : AppColors.secondaryColor.withOpacity(0.5),
-              fontSize: 14.sp,
-              fontFamily: AppFonts.mainFontName,
+            SizedBox(height: 10.h),
+            Text(
+              'Try different keywords',
+              style: TextStyle(
+                color: color,
+                fontSize: 14.sp,
+                fontFamily: AppFonts.mainFontName,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

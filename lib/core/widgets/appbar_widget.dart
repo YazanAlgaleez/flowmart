@@ -1,13 +1,10 @@
 import 'dart:ui';
 
-import 'package:flowmart/core/providers/theme_provider.dart';
 import 'package:flowmart/core/styling/app_colors.dart';
 import 'package:flowmart/core/styling/app_fonts.dart';
-import 'package:flowmart/core/styling/app_styles.dart';
-import 'package:flowmart/core/styling/app_themes.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:provider/provider.dart';
 
 class AppbarWidget extends StatelessWidget implements PreferredSizeWidget {
   final String? title;

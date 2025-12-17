@@ -1,7 +1,9 @@
+import 'package:email_otp/email_otp.dart';
 import 'package:flowmart/core/routing/app_routing.dart';
 import 'package:flowmart/pages/forgot_password_page.dart';
 import 'package:flowmart/pages/home_page.dart';
 import 'package:flowmart/pages/login_page.dart';
+import 'package:flowmart/pages/new_password_page.dart'; // 1. تأكد من استدعاء الصفحة هنا
 import 'package:flowmart/pages/onBordar_page.dart';
 import 'package:flowmart/pages/otp_page.dart';
 import 'package:flowmart/pages/register_page.dart';
@@ -31,11 +33,19 @@ class AppRouter {
       ),
       GoRoute(
         path: AppRoutes.otp,
-        builder: (context, state) => const OtpPage(),
+        builder: (context, state) {
+          final myAuth = state.extra as EmailOTP;
+          return OtpPage(myAuth: myAuth);
+        },
       ),
       GoRoute(
         path: AppRoutes.forgotPassword,
         builder: (context, state) => const ForgotPasswordPage(),
+      ),
+      // 2. إضافة التوجيه للصفحة الجديدة
+      GoRoute(
+        path: AppRoutes.newPassword,
+        builder: (context, state) => const NewPasswordPage(),
       ),
       GoRoute(
         path: AppRoutes.test,
@@ -47,8 +57,7 @@ class AppRouter {
       ),
       GoRoute(
         path: AppRoutes.spacingWidgets,
-        builder: (context, state) =>
-            const SearchPage(), // Assuming search page for now
+        builder: (context, state) => const SearchPage(),
       ),
     ],
   );
