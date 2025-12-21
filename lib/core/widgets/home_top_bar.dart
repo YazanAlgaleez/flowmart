@@ -25,8 +25,8 @@ class HomeTopBar extends StatelessWidget {
         color: isDark
             ? Colors.black.withOpacity(0.5)
             : isGirlie
-            ? Colors.pink.withOpacity(0.5)
-            : Colors.white.withOpacity(0.8),
+                ? Colors.pink.withOpacity(0.5)
+                : Colors.white.withOpacity(0.8),
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(20.r),
           bottomRight: Radius.circular(20.r),
@@ -42,8 +42,8 @@ class HomeTopBar extends StatelessWidget {
               color: isDark
                   ? Colors.white
                   : isGirlie
-                  ? const Color(0xFF8B008B)
-                  : AppColors.primaryColor,
+                      ? const Color(0xFF8B008B)
+                      : AppColors.primaryColor,
               fontSize: 24.sp,
               fontFamily: AppFonts.mainFontName,
               fontWeight: FontWeight.bold,
@@ -59,13 +59,13 @@ class HomeTopBar extends StatelessWidget {
                   isDark
                       ? Icons.light_mode
                       : isGirlie
-                      ? Icons.palette
-                      : Icons.dark_mode,
+                          ? Icons.palette
+                          : Icons.dark_mode,
                   color: isDark
                       ? Colors.white
                       : isGirlie
-                      ? const Color(0xFF8B008B)
-                      : AppColors.primaryColor,
+                          ? const Color(0xFF8B008B)
+                          : AppColors.primaryColor,
                   size: 28.sp,
                 ),
               ),
@@ -78,8 +78,8 @@ class HomeTopBar extends StatelessWidget {
                   color: isDark
                       ? Colors.white
                       : isGirlie
-                      ? const Color(0xFF8B008B)
-                      : AppColors.primaryColor,
+                          ? const Color(0xFF8B008B)
+                          : AppColors.primaryColor,
                   size: 28.sp,
                 ),
               ),
@@ -92,8 +92,8 @@ class HomeTopBar extends StatelessWidget {
                   color: isDark
                       ? Colors.white
                       : isGirlie
-                      ? const Color(0xFF8B008B)
-                      : AppColors.primaryColor,
+                          ? const Color(0xFF8B008B)
+                          : AppColors.primaryColor,
                   size: 28.sp,
                 ),
               ),

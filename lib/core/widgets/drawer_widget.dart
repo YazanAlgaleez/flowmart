@@ -5,7 +5,6 @@ import 'package:flowmart/core/styling/app_themes.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-// import '../../services/auth_service.dart'; // لم نعد بحاجة له للخروج فقط، يمكننا استخدام Firebase مباشرة
 
 class DrawerWidget extends StatelessWidget {
   const DrawerWidget({super.key});
@@ -19,28 +18,26 @@ class DrawerWidget extends StatelessWidget {
     final Color backgroundColor = isDark
         ? const Color(0xFF0D0D0D)
         : isGirlie
-        ? const Color(0xFFFFF0F5)
-        : Colors.white;
+            ? const Color(0xFFFFF0F5)
+            : Colors.white;
 
     final Color headerColor = isDark
         ? const Color(0xFF1A1A1A)
         : isGirlie
-        ? const Color(0xFFFF69B4)
-        : Colors.blue;
+            ? const Color(0xFFFF69B4)
+            : Colors.blue;
 
     final Color itemsColor = isDark
         ? Colors.white
         : isGirlie
-        ? const Color(0xFF8B008B)
-        : Colors.black;
+            ? const Color(0xFF8B008B)
+            : Colors.black;
 
     return Drawer(
       backgroundColor: backgroundColor,
-      // 1. هنا أضفنا StreamBuilder لمراقبة حالة المستخدم لحظة بلحظة
       child: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {
-          // جلب بيانات المستخدم الحية
           final User? user = snapshot.data;
           final bool isLoggedIn = user != null;
 
@@ -53,7 +50,6 @@ class DrawerWidget extends StatelessWidget {
                     UserAccountsDrawerHeader(
                       decoration: BoxDecoration(color: headerColor),
                       accountName: Text(
-                        // 2. تحديث الاسم بناءً على الحالة
                         isLoggedIn
                             ? (user.displayName ?? "No Name")
                             : "Guest User",
@@ -63,7 +59,6 @@ class DrawerWidget extends StatelessWidget {
                         ),
                       ),
                       accountEmail: Text(
-                        // 3. تحديث الإيميل
                         isLoggedIn ? (user.email ?? "") : "Welcome to FlowMart",
                         style: const TextStyle(color: Colors.white70),
                       ),
@@ -71,12 +66,11 @@ class DrawerWidget extends StatelessWidget {
                         backgroundColor: Colors.white,
                         child: isLoggedIn
                             ? Text(
-                                // التأكد من أن الاسم ليس فارغاً قبل أخذ الحرف الأول
                                 (user.displayName != null &&
                                         user.displayName!.isNotEmpty)
                                     ? user.displayName!
-                                          .substring(0, 1)
-                                          .toUpperCase()
+                                        .substring(0, 1)
+                                        .toUpperCase()
                                     : "U",
                                 style: TextStyle(
                                   fontSize: 24,
@@ -104,32 +98,41 @@ class DrawerWidget extends StatelessWidget {
                         context.go(AppRoutes.search);
                       },
                     ),
+
+                    // =============== هنا التعديل لتفعيل الزر ===============
+                    _buildListTile(
+                      icon: Icons.chat,
+                      title: 'Chat History',
+                      color: itemsColor,
+                      onTap: () {
+                        Navigator.pop(context); // إغلاق القائمة
+                        // استخدمنا push لكي يستطيع المستخدم الرجوع للخلف
+                        context.push(AppRoutes.chatHistory);
+                      },
+                    ),
+                    // ====================================================
+
                     _buildListTile(
                       icon: Icons.settings,
                       title: 'Settings',
                       color: itemsColor,
                       onTap: () {
                         Navigator.pop(context);
-                        // context.go(AppRoutes.settings); // أضف المسار لاحقاً
+                        // context.push(AppRoutes.settings); // فعله لاحقاً عند إنشاء الصفحة
                       },
                     ),
                   ],
                 ),
               ),
               Divider(color: itemsColor.withOpacity(0.2)),
-
-              // 4. زر الدخول/الخروج المتغير
               _buildListTile(
                 icon: isLoggedIn ? Icons.logout : Icons.login,
                 title: isLoggedIn ? 'Log Out' : 'Log In',
                 color: isLoggedIn ? Colors.red : itemsColor,
                 onTap: () async {
-                  Navigator.pop(context); // إغلاق الـ Drawer
-
+                  Navigator.pop(context);
                   if (isLoggedIn) {
-                    // تسجيل الخروج
                     await FirebaseAuth.instance.signOut();
-
                     if (context.mounted) {
                       context.go(AppRoutes.login);
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -139,7 +142,6 @@ class DrawerWidget extends StatelessWidget {
                       );
                     }
                   } else {
-                    // الذهاب لتسجيل الدخول
                     context.go(AppRoutes.login);
                   }
                 },

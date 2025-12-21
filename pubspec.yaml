@@ -14,19 +14,32 @@ dependencies:
   cupertino_icons: ^1.0.8
   flutter_screenutil: ^5.9.3
   video_player: ^2.8.6
-  go_router: ^14.2.0
+  go_router: ^17.0.1
   provider: ^6.1.5+1
   font_awesome_flutter: ^10.12.0
-  firebase_core: ^4.2.1
-  firebase_auth: ^6.1.2
+  firebase_core: ^4.3.0
+  firebase_auth: ^6.1.3
   google_sign_in: ^7.2.0
   email_otp: ^3.1.0
   firebase_messaging: ^16.1.0
+  cloud_firestore: ^6.1.1
+  model_viewer_plus: ^1.9.3
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.13.1
+
+# --- إعدادات الأيقونة الجديدة (تم دمج الخلفية) ---
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "lib/assets/images/logo.jpg"
+  min_sdk_android: 21
+  # 👇 هنا وضعنا لون كحلي غامق قريب من لون شعارك لدمج الحواف
+  adaptive_icon_background: "#0B2447" 
+  adaptive_icon_foreground: "lib/assets/images/logo.jpg"
 
 flutter:
   uses-material-design: true
