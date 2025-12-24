@@ -1,4 +1,5 @@
-// هذا الملف يحتوي فقط على الثوابت (Strings)
+// 📂 المسار: lib/core/routing/app_routes.dart
+
 class AppRoutes {
   static const String home = '/home';
   static const String otp = '/otp';
@@ -12,4 +13,5 @@ class AppRoutes {
   static const String search = '/search';
   static const String chat = '/chat';
   static const String chatHistory = '/chatHistory';
+  static const String upload = '/upload'; // ✅ رابط صفحة الرفع
 }

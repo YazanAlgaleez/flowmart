@@ -1,6 +1,12 @@
+// 📂 المسار: lib/core/routing/app_routing.dart
+
 import 'package:email_otp/email_otp.dart';
-// ✅ 1. استدعاء ملف الأسماء من الخطوة الأولى
 import 'package:flowmart/core/routing/app_routing.dart';
+import 'package:go_router/go_router.dart';
+
+// ✅ استدعاء ملف الثوابت الذي أنشأناه قبل قليل
+
+// استدعاء الصفحات
 import 'package:flowmart/pages/chat_history_screen.dart';
 import 'package:flowmart/pages/chat_page.dart';
 import 'package:flowmart/pages/forgot_password_page.dart';
@@ -12,7 +18,7 @@ import 'package:flowmart/pages/otp_page.dart';
 import 'package:flowmart/pages/register_page.dart';
 import 'package:flowmart/pages/search_page.dart';
 import 'package:flowmart/pages/test_page.dart';
-import 'package:go_router/go_router.dart';
+import 'package:flowmart/pages/upload_page.dart'; // ✅ تأكد أن الملف موجود
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -65,19 +71,20 @@ class AppRouter {
         path: AppRoutes.spacingWidgets,
         builder: (context, state) => const SearchPage(),
       ),
-
-      // ✅ إعدادات الشات
       GoRoute(
         path: AppRoutes.chat,
         builder: (context, state) {
-          // استقبال البيانات بأمان
           final map = state.extra as Map<String, dynamic>? ?? {};
-
           return ChatPage(
             receiverUserID: map['id'] ?? '',
             receiverUserEmail: map['name'] ?? map['email'] ?? 'Unknown',
           );
         },
+      ),
+      // ✅ مسار صفحة الرفع
+      GoRoute(
+        path: AppRoutes.upload,
+        builder: (context, state) => UploadPage(),
       ),
     ],
   );
