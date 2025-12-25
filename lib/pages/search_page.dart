@@ -1,14 +1,18 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flowmart/core/providers/product_provider.dart'; // ✅ ضروري للأكشنز
 import 'package:flowmart/core/providers/theme_provider.dart';
+import 'package:flowmart/core/routing/app_routing.dart'; // ✅ للراوتر
 import 'package:flowmart/core/styling/app_colors.dart';
 import 'package:flowmart/core/styling/app_fonts.dart';
 import 'package:flowmart/core/styling/app_themes.dart';
-import 'package:flowmart/core/widgets/drawer_widget.dart'; // إذا لم تكن مستخدمة يمكن حذفها
-import 'package:flowmart/models/product.dart';
-import 'package:flowmart/core/widgets/home_top_bar.dart'; // إذا لم تكن مستخدمة يمكن حذفها
 import 'package:flowmart/core/widgets/product_card.dart';
 import 'package:flowmart/core/widgets/watermark_widget.dart';
+import 'package:flowmart/models/product.dart'; // ✅ استيراد Product من models
+import 'package:flowmart/services/firebase_service.dart'; // ✅ لخدمات الفايربيس
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 class SearchPage extends StatefulWidget {
@@ -20,81 +24,48 @@ class SearchPage extends StatefulWidget {
 
 class _SearchPageState extends State<SearchPage> {
   final TextEditingController _searchController = TextEditingController();
-  List<Product> _allProducts = [];
-  List<Product> _filteredProducts = [];
-  bool _isLoading = false;
+  final FirebaseService _firebaseService = FirebaseService(); // ✅
+
+  List<Product> _allProducts = []; // القائمة الكاملة من الفايربيس
+  List<Product> _filteredProducts = []; // نتائج البحث
+  bool _isLoading = true; // نبدأ بالتحميل
   bool _hasSearched = false;
 
   @override
   void initState() {
     super.initState();
-    _loadProducts();
-    // إضافة مستمع لتحديث زر المسح (X) عند الكتابة
+    _fetchProductsFromFirebase(); // ✅ جلب البيانات الحقيقية
+
     _searchController.addListener(() {
       setState(() {});
     });
   }
 
-  void _loadProducts() {
-    // Mock Data
-    _allProducts = [
-      Product(
-        id: '1',
-        name: 'Wireless Headphones',
-        price: 99.99,
-        discount: 0.2,
-        imageUrl: 'lib/assets/images/download.jpg',
-        videoUrl: null,
-        description:
-            'High-quality wireless headphones with noise cancellation.',
-        inStock: true,
-      ),
-      Product(
-        id: '2',
-        name: 'Smart Watch',
-        price: 199.99,
-        discount: 0.15,
-        imageUrl: 'lib/assets/images/download.jpeg',
-        videoUrl: null,
-        description: 'Feature-packed smart watch with health tracking.',
-        inStock: true,
-      ),
-      Product(
-        id: '3',
-        name: 'Gaming Mouse',
-        price: 49.99,
-        discount: null,
-        imageUrl:
-            'lib/assets/images/WhatsApp Image 2025-10-31 at 16.23.33_375c0630.jpg',
-        videoUrl: null,
-        description: 'Ergonomic gaming mouse with customizable buttons.',
-        inStock: false,
-      ),
-      Product(
-        id: '4',
-        name: 'Bluetooth Speaker',
-        price: 79.99,
-        discount: 0.1,
-        imageUrl: 'lib/assets/images/download.jpg',
-        videoUrl: null,
-        description: 'Portable Bluetooth speaker with deep bass.',
-        inStock: true,
-      ),
-      Product(
-        id: '5',
-        name: 'Laptop Stand',
-        price: 29.99,
-        discount: null,
-        imageUrl: 'lib/assets/images/download.jpeg',
-        videoUrl: null,
-        description: 'Adjustable laptop stand for better ergonomics.',
-        inStock: true,
-      ),
-    ];
+  // ✅ دالة لجلب كل المنتجات مرة واحدة
+  Future<void> _fetchProductsFromFirebase() async {
+    try {
+      final snapshot =
+          await FirebaseFirestore.instance.collection('products').get();
+
+      final products =
+          snapshot.docs.map((doc) => Product.fromFirestore(doc)).toList();
+
+      if (mounted) {
+        setState(() {
+          _allProducts = products;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        // يمكنك إظهار رسالة خطأ هنا
+      }
+      debugPrint("Error fetching products: $e");
+    }
   }
 
   void _performSearch(String query) {
-    // إخفاء الكيبورد عند البدء بالبحث
     FocusScope.of(context).unfocus();
 
     if (query.isEmpty) {
@@ -106,25 +77,13 @@ class _SearchPageState extends State<SearchPage> {
     }
 
     setState(() {
-      _isLoading = true;
-      _hasSearched = true; // نعتبر أن المستخدم بحث حتى لو لم تظهر نتائج بعد
-    });
-
-    // Simulate API call delay
-    Future.delayed(const Duration(milliseconds: 500), () {
-      final results = _allProducts.where((product) {
+      _hasSearched = true;
+      // ✅ التصفية تتم محلياً من القائمة المحملة من الفايربيس
+      _filteredProducts = _allProducts.where((product) {
         final queryLower = query.toLowerCase();
         final nameLower = product.name.toLowerCase();
-        // يمكن إضافة البحث في الوصف أيضاً
-        return nameLower.contains(queryLower) && product.inStock;
+        return nameLower.contains(queryLower);
       }).toList();
-
-      if (mounted) {
-        setState(() {
-          _filteredProducts = results;
-          _isLoading = false;
-        });
-      }
     });
   }
 
@@ -134,72 +93,81 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   // --- Actions ---
-  void _onLike(String productId) {
+  // ✅ تم تفعيل الأكشنز لتعمل مثل الصفحة الرئيسية
+  void _onLike(Product product, ProductProvider provider) {
+    final user = FirebaseAuth.instance.currentUser;
+    provider.toggleLike(product.id);
+    if (user != null) {
+      _firebaseService.addUserInterest(user.uid, "search_interest");
+    }
+  }
+
+  void _onAddToCart(String productId, ProductProvider provider) {
+    provider.toggleCart(productId);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Liked product $productId'),
-        duration: const Duration(seconds: 1),
-      ),
+          content: Text('Updated cart'), duration: Duration(milliseconds: 500)),
     );
   }
 
-  void _onAddToCart(String productId) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Added product $productId to cart'),
-        duration: const Duration(seconds: 1),
-      ),
-    );
-  }
-
-  void _onComment(String productId) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Comment for product $productId'),
-        duration: const Duration(seconds: 1),
-      ),
-    );
+  void _onChat(Product product) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text("Login required")));
+      return;
+    }
+    context.push(AppRoutes.chat, extra: {
+      'id': product.id,
+      'name': product.name,
+      'product': {
+        'name': product.name,
+        'price': product.price,
+        'image': product.imageUrl
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final productProvider =
+        Provider.of<ProductProvider>(context); // ✅ استدعاء البروفايدر
+
     final isDark = themeProvider.currentTheme == AppTheme.dark;
     final isGirlie = themeProvider.currentTheme == AppTheme.girlie;
 
-    // --- تعريف الألوان مرة واحدة لتنظيف الكود ---
     final Color backgroundColor = isDark
         ? const Color(0xFF0D0D0D)
         : isGirlie
-        ? const Color(0xFFFFF0F5)
-        : AppColors.whiteColor;
+            ? const Color(0xFFFFF0F5)
+            : AppColors.whiteColor;
 
     final Color appBarColor = isDark
         ? const Color(0xFF1A1A1A)
         : isGirlie
-        ? const Color(0xFFFF69B4)
-        : Colors.blue;
+            ? const Color(0xFFFF69B4)
+            : Colors.blue;
 
     final Color iconColor = isDark
         ? Colors.white
         : isGirlie
-        ? const Color(0xFF8B008B)
-        : Colors.white; // أيقونة العودة والبحث
+            ? const Color(0xFF8B008B)
+            : Colors.white;
 
     final Color textColor = isDark
         ? Colors.white
         : isGirlie
-        ? const Color(0xFF8B008B)
-        : AppColors.blackColor;
+            ? const Color(0xFF8B008B)
+            : AppColors.blackColor;
 
     final Color hintColor = isDark
         ? Colors.white.withOpacity(0.7)
         : isGirlie
-        ? const Color(0xFFDA70D6)
-        : AppColors.secondaryColor;
+            ? const Color(0xFFDA70D6)
+            : AppColors.secondaryColor;
 
     return GestureDetector(
-      // إغلاق الكيبورد عند النقر في أي مكان فارغ
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         backgroundColor: backgroundColor,
@@ -208,7 +176,7 @@ class _SearchPageState extends State<SearchPage> {
           iconTheme: IconThemeData(color: iconColor),
           title: TextField(
             controller: _searchController,
-            textInputAction: TextInputAction.search, // زر البحث في الكيبورد
+            textInputAction: TextInputAction.search,
             style: TextStyle(
               color: textColor,
               fontSize: 16.sp,
@@ -222,31 +190,31 @@ class _SearchPageState extends State<SearchPage> {
                 fontFamily: AppFonts.mainFontName,
               ),
               border: InputBorder.none,
-              // أيقونة البحث
-              prefixIcon: Icon(
-                Icons.search,
-                color: iconColor.withOpacity(0.7), // شفافية قليلة
-                size: 24.sp,
-              ),
-              // زر المسح (X)
+              prefixIcon: Icon(Icons.search,
+                  color: iconColor.withOpacity(0.7), size: 24.sp),
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
                       icon: Icon(Icons.clear, color: iconColor),
                       onPressed: _clearSearch,
                     )
                   : null,
-              contentPadding: EdgeInsets.symmetric(
-                horizontal: 20.w,
-                vertical: 12.h,
-              ),
+              contentPadding:
+                  EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
             ),
             onSubmitted: _performSearch,
+            onChanged: (val) {
+              // ✅ بحث فوري أثناء الكتابة (اختياري)
+              _performSearch(val);
+            },
           ),
         ),
         body: Stack(
           children: [
             Column(
-              children: [Expanded(child: _buildResults(isDark, isGirlie))],
+              children: [
+                Expanded(
+                    child: _buildResults(isDark, isGirlie, productProvider))
+              ],
             ),
             const WatermarkWidget(),
           ],
@@ -255,34 +223,35 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  Widget _buildResults(bool isDark, bool isGirlie) {
-    if (!_hasSearched && _searchController.text.isEmpty) {
-      return _buildInitialState(isDark, isGirlie);
+  Widget _buildResults(
+      bool isDark, bool isGirlie, ProductProvider productProvider) {
+    // إذا كان جاري تحميل البيانات من الفايربيس لأول مرة
+    if (_isLoading && _allProducts.isEmpty) {
+      return _buildLoadingState();
     }
 
-    if (_isLoading) {
-      return _buildLoadingState();
+    if (!_hasSearched && _searchController.text.isEmpty) {
+      return _buildInitialState(isDark, isGirlie);
     }
 
     if (_filteredProducts.isEmpty) {
       return _buildNoResultsState(isDark, isGirlie);
     }
 
-    // استخدام PageView لعرض نمط الـ TikTok أو التمرير العمودي لكل منتج
     return PageView.builder(
       scrollDirection: Axis.vertical,
       itemCount: _filteredProducts.length,
       itemBuilder: (context, index) {
         final product = _filteredProducts[index];
+
         return Dismissible(
           key: Key(product.id),
           direction: DismissDirection.endToStart,
           onDismissed: (direction) {
-            // حذفنا العنصر من القائمة الظاهرة لتجنب خطأ الـ Dismissible
             setState(() {
               _filteredProducts.removeAt(index);
             });
-            _onAddToCart(product.id);
+            _onAddToCart(product.id, productProvider);
           },
           background: Container(
             alignment: Alignment.centerRight,
@@ -293,32 +262,28 @@ class _SearchPageState extends State<SearchPage> {
               children: [
                 Icon(Icons.add_shopping_cart, color: Colors.white, size: 40.sp),
                 SizedBox(height: 8.h),
-                Text(
-                  'Add to Cart',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14.sp,
-                    fontFamily: AppFonts.mainFontName,
-                  ),
-                ),
+                Text('Add to Cart',
+                    style: TextStyle(color: Colors.white, fontSize: 14.sp)),
               ],
             ),
           ),
           child: GestureDetector(
-            onDoubleTap: () => _onLike(product.id),
-            // منطق السحب للأعلى لفتح التفاصيل (يمكن تفعيله إذا كان هناك صفحة تفاصيل)
-            onVerticalDragEnd: (details) {
-              if (details.primaryVelocity! < -500) {
-                // Swipe up logic
-              }
-            },
+            onDoubleTap: () => _onLike(product, productProvider),
             child: ProductCard(
-              product: product,
-              isLiked: false,
-              isInCart: false,
-              onLike: () => _onLike(product.id),
-              onAddToCart: () => _onAddToCart(product.id),
-              onComment: () => _onComment(product.id),
+              product: product, // نمرر المنتج الصحيح
+
+              // ✅ ربط الحالة بالبروفايدر
+              isLiked: productProvider.likedProducts.contains(product.id),
+              isInCart: productProvider.cartProducts.contains(product.id),
+
+              onLike: () => _onLike(product, productProvider),
+              onAddToCart: () => _onAddToCart(product.id, productProvider),
+
+              // ✅ تفعيل الشات
+              onChat: () => _onChat(product),
+
+              onComment: () {},
+              onArTap: () {},
             ),
           ),
         );
@@ -330,26 +295,18 @@ class _SearchPageState extends State<SearchPage> {
     final color = isDark
         ? Colors.white.withOpacity(0.5)
         : isGirlie
-        ? const Color(0xFFDA70D6).withOpacity(0.5)
-        : AppColors.secondaryColor.withOpacity(0.5);
+            ? const Color(0xFFDA70D6).withOpacity(0.5)
+            : AppColors.secondaryColor.withOpacity(0.5);
 
     return Center(
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.search, color: color, size: 80.sp),
-            SizedBox(height: 20.h),
-            Text(
-              'Search for products',
-              style: TextStyle(
-                color: color.withOpacity(0.7),
-                fontSize: 18.sp,
-                fontFamily: AppFonts.mainFontName,
-              ),
-            ),
-          ],
-        ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.search, color: color, size: 80.sp),
+          SizedBox(height: 20.h),
+          Text('Search for products',
+              style: TextStyle(color: color.withOpacity(0.7), fontSize: 18.sp)),
+        ],
       ),
     );
   }
@@ -357,8 +314,7 @@ class _SearchPageState extends State<SearchPage> {
   Widget _buildLoadingState() {
     return Center(
       child: CircularProgressIndicator(
-        valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryColor),
-      ),
+          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryColor)),
     );
   }
 
@@ -366,35 +322,18 @@ class _SearchPageState extends State<SearchPage> {
     final color = isDark
         ? Colors.white.withOpacity(0.5)
         : isGirlie
-        ? const Color(0xFFDA70D6).withOpacity(0.5)
-        : AppColors.secondaryColor.withOpacity(0.5);
+            ? const Color(0xFFDA70D6).withOpacity(0.5)
+            : AppColors.secondaryColor.withOpacity(0.5);
 
     return Center(
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.search_off, color: color, size: 80.sp),
-            SizedBox(height: 20.h),
-            Text(
-              'No products found',
-              style: TextStyle(
-                color: color.withOpacity(0.7),
-                fontSize: 18.sp,
-                fontFamily: AppFonts.mainFontName,
-              ),
-            ),
-            SizedBox(height: 10.h),
-            Text(
-              'Try different keywords',
-              style: TextStyle(
-                color: color,
-                fontSize: 14.sp,
-                fontFamily: AppFonts.mainFontName,
-              ),
-            ),
-          ],
-        ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.search_off, color: color, size: 80.sp),
+          SizedBox(height: 20.h),
+          Text('No products found',
+              style: TextStyle(color: color.withOpacity(0.7), fontSize: 18.sp)),
+        ],
       ),
     );
   }

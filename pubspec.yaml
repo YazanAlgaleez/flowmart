@@ -29,6 +29,7 @@ dependencies:
   flutter_ai_toolkit: ^1.0.0
   google_generative_ai: ^0.4.7
   firebase_ai: ^3.6.1
+  audioplayers: ^6.5.1
 
 dev_dependencies:
   flutter_test:
