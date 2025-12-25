@@ -87,4 +87,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'smart-ai-product-app-7ab96.firebasestorage.app',
     measurementId: 'G-ZN1XC4S0BJ',
   );
+
 }

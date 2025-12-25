@@ -13,5 +13,5 @@ class AppRoutes {
   static const String search = '/search';
   static const String chat = '/chat';
   static const String chatHistory = '/chatHistory';
-  static const String upload = '/upload'; // ✅ رابط صفحة الرفع
+  static const String upload = '/upload';
 }

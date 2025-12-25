@@ -1,10 +1,11 @@
 // 📂 المسار: lib/core/routing/app_routing.dart
 
-import 'package:email_otp/email_otp.dart';
 import 'package:flowmart/core/routing/app_routing.dart';
+import 'package:flutter/material.dart'; // ✅ ضروري جداً من أجل GlobalKey
+import 'package:email_otp/email_otp.dart';
 import 'package:go_router/go_router.dart';
 
-// ✅ استدعاء ملف الثوابت الذي أنشأناه قبل قليل
+// استدعاء ملف الثوابت
 
 // استدعاء الصفحات
 import 'package:flowmart/pages/chat_history_screen.dart';
@@ -18,10 +19,18 @@ import 'package:flowmart/pages/otp_page.dart';
 import 'package:flowmart/pages/register_page.dart';
 import 'package:flowmart/pages/search_page.dart';
 import 'package:flowmart/pages/test_page.dart';
-import 'package:flowmart/pages/upload_page.dart'; // ✅ تأكد أن الملف موجود
+import 'package:flowmart/pages/upload_page.dart';
 
 class AppRouter {
+  // ✅ 1. تعريف مفتاح التنقل العام (Global Key)
+  // هذا المفتاح سيسمح لنا بالوصول للنافجيتر من أي مكان في التطبيق (بما في ذلك الزر العائم)
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
+
   static final GoRouter router = GoRouter(
+    // ✅ 2. ربط المفتاح بالراوتر
+    navigatorKey: navigatorKey,
+
     initialLocation: AppRoutes.home,
     routes: [
       GoRoute(
@@ -81,7 +90,6 @@ class AppRouter {
           );
         },
       ),
-      // ✅ مسار صفحة الرفع
       GoRoute(
         path: AppRoutes.upload,
         builder: (context, state) => UploadPage(),

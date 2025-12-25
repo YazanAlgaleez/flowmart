@@ -24,6 +24,11 @@ dependencies:
   firebase_messaging: ^16.1.0
   cloud_firestore: ^6.1.1
   model_viewer_plus: ^1.9.3
+  firebase_storage: ^13.0.5
+  image_picker: ^1.2.1
+  flutter_ai_toolkit: ^1.0.0
+  google_generative_ai: ^0.4.7
+  firebase_ai: ^3.6.1
 
 dev_dependencies:
   flutter_test:

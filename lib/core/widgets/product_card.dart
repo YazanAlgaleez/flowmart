@@ -9,7 +9,6 @@ class ProductCard extends StatelessWidget {
   final VoidCallback onComment;
   final VoidCallback? onChat;
   final VoidCallback? onArTap;
-
   const ProductCard({
     super.key,
     required this.product,
@@ -69,8 +68,6 @@ class ProductCard extends StatelessWidget {
               _sideBtn(
                   Icons.view_in_ar, "AR View", onArTap ?? () {}, Colors.white),
               const SizedBox(height: 20),
-
-              _sideBtn(Icons.comment, "Comment", onComment, Colors.white),
             ],
           ),
         ),
