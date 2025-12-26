@@ -1,10 +1,10 @@
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart'; // ✅ إضافة مكتبة فايرستور
+import 'package:firebase_core/firebase_core.dart'; // ✅ إضافة Core للربط
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
-// تم تغيير الاسم هنا ليطابق ملف الراوتر عندك
 class UploadPage extends StatefulWidget {
   const UploadPage({Key? key}) : super(key: key);
 
@@ -51,7 +51,7 @@ class _UploadPageState extends State<UploadPage> {
     setState(() => _isLoading = true);
 
     try {
-      // رفع الصورة
+      // 1. رفع الصورة إلى Storage (هذا الجزء سليم ويعمل)
       String fileName = DateTime.now().millisecondsSinceEpoch.toString();
       Reference storageRef =
           FirebaseStorage.instance.ref().child('products/$fileName.jpg');
@@ -60,21 +60,29 @@ class _UploadPageState extends State<UploadPage> {
       TaskSnapshot snapshot = await uploadTask;
       String downloadUrl = await snapshot.ref.getDownloadURL();
 
-      // حفظ البيانات
-      await FirebaseFirestore.instance.collection('products').add({
+      // 2. ✅ الاتصال بقاعدة البيانات الثانية (flowmart) وحفظ المنتج فيها
+      final db = FirebaseFirestore.instanceFor(
+        app: Firebase.app(),
+        databaseId: 'flowmart', // 👈 هنا يذهب للقاعدة الصحيحة
+      );
+
+      await db.collection('products').add({
         'name': _nameController.text,
         'price': double.tryParse(_priceController.text) ?? 0.0,
         'description': _descController.text,
         'imageUrl': downloadUrl,
-        'createdAt': FieldValue.serverTimestamp(),
+        'createdAt': FieldValue.serverTimestamp(), // إضافة التوقيت
+        // يمكنك إضافة 'userId': FirebaseAuth.instance.currentUser?.uid إذا أردت
       });
 
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
             backgroundColor: Colors.green,
             content: Text('تم رفع المنتج بنجاح!')),
       );
 
+      // تنظيف الحقول
       _nameController.clear();
       _priceController.clear();
       _descController.clear();

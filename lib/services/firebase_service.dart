@@ -1,22 +1,26 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 class FirebaseService {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  // ✅ التعديل هنا: ربطنا الكود بقاعدة "Flowmart" بدلاً من الافتراضية
+  final FirebaseFirestore _db = FirebaseFirestore.instanceFor(
+    app: Firebase.app(),
+    databaseId:
+        'Flowmart', // 👈 تأكد أن الاسم يطابق تماماً ما كتبته في الفايربيس (Case Sensitive)
+  );
 
-  // 1. إنشاء أو تحديث بيانات المستخدم (يستدعى عند تسجيل الدخول)
+  // 1. إنشاء أو تحديث بيانات المستخدم
   Future<void> saveUser(String userId, Map<String, dynamic> userData) async {
     await _db.collection('users').doc(userId).set({
       ...userData,
       'lastActive': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true)); // merge: عشان ما نحذف الاهتمامات القديمة
+    }, SetOptions(merge: true));
   }
 
-  // 2. الوظيفة الذكية: إضافة اهتمام جديد للمستخدم
-  // هذه الدالة رح نستخدمها لما يعمل لايك أو يطول في الصفحة
+  // 2. إضافة اهتمام جديد للمستخدم
   Future<void> addUserInterest(String userId, String category) async {
     try {
       await _db.collection('users').doc(userId).update({
-        // arrayUnion: بتضيف الاهتمام بس اذا مش موجود (عشان ما يتكرر)
         'interests': FieldValue.arrayUnion([category.toLowerCase()])
       });
       print("✅ Interest Added: $category");
@@ -25,7 +29,7 @@ class FirebaseService {
     }
   }
 
-  // 3. رفع منتج (للأدمن أو للتجربة حالياً)
+  // 3. رفع منتج (يستخدم في صفحة UploadPage)
   Future<void> uploadProduct(Map<String, dynamic> productData) async {
     await _db.collection('products').add({
       ...productData,
@@ -33,7 +37,7 @@ class FirebaseService {
     });
   }
 
-  // 4. جلب المنتجات (للعرض)
+  // 4. جلب المنتجات (يستخدم في صفحة HomePage)
   Stream<QuerySnapshot> getProducts() {
     return _db
         .collection('products')

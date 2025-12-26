@@ -78,14 +78,23 @@ class ProductCard extends StatelessWidget {
               ),
               SizedBox(height: 20.h),
 
-              // ✅ زر الـ AR (تحت الشات مباشرة)
+              // ✅ زر الـ AR (تم التصحيح هنا)
               _buildSideButton(
                 icon: Icons.view_in_ar, // أيقونة المكعب (AR)
                 color: Colors.white,
                 label: "AR View",
-                onTap: onArTap ?? () {}, // استدعاء الدالة
+                // ✅ التصحيح: نستدعي الدالة القادمة من HomePage فقط
+                onTap: onArTap ?? () {},
               ),
               SizedBox(height: 20.h),
+
+              // زر السلة (Cart) - كان ناقصاً في الكود الذي أرسلته
+              _buildSideButton(
+                icon: isInCart ? Icons.shopping_cart : Icons.add_shopping_cart,
+                color: isInCart ? Colors.greenAccent : Colors.white,
+                label: "Cart",
+                onTap: onAddToCart,
+              ),
             ],
           ),
         ),

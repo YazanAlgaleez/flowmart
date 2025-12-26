@@ -1,15 +1,17 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flowmart/core/providers/product_provider.dart'; // ✅ ضروري للأكشنز
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flowmart/core/providers/product_provider.dart';
 import 'package:flowmart/core/providers/theme_provider.dart';
-import 'package:flowmart/core/routing/app_routing.dart'; // ✅ للراوتر
+import 'package:flowmart/core/routing/app_routing.dart';
 import 'package:flowmart/core/styling/app_colors.dart';
 import 'package:flowmart/core/styling/app_fonts.dart';
 import 'package:flowmart/core/styling/app_themes.dart';
 import 'package:flowmart/core/widgets/product_card.dart';
 import 'package:flowmart/core/widgets/watermark_widget.dart';
-import 'package:flowmart/models/product.dart'; // ✅ استيراد Product من models
-import 'package:flowmart/services/firebase_service.dart'; // ✅ لخدمات الفايربيس
+import 'package:flowmart/models/product.dart';
+import 'package:flowmart/pages/ar_view_page.dart'; // ✅ تأكد من استدعاء صفحة AR
+import 'package:flowmart/services/firebase_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
@@ -24,31 +26,42 @@ class SearchPage extends StatefulWidget {
 
 class _SearchPageState extends State<SearchPage> {
   final TextEditingController _searchController = TextEditingController();
-  final FirebaseService _firebaseService = FirebaseService(); // ✅
+  final FirebaseService _firebaseService = FirebaseService();
 
-  List<Product> _allProducts = []; // القائمة الكاملة من الفايربيس
+  List<Product> _allProducts = []; // القائمة الكاملة
   List<Product> _filteredProducts = []; // نتائج البحث
-  bool _isLoading = true; // نبدأ بالتحميل
+  bool _isLoading = true;
   bool _hasSearched = false;
 
   @override
   void initState() {
     super.initState();
-    _fetchProductsFromFirebase(); // ✅ جلب البيانات الحقيقية
+    _fetchProductsFromFirebase();
 
     _searchController.addListener(() {
       setState(() {});
     });
   }
 
-  // ✅ دالة لجلب كل المنتجات مرة واحدة
+  // ✅ جلب البيانات من قاعدة flowmart
   Future<void> _fetchProductsFromFirebase() async {
     try {
-      final snapshot =
-          await FirebaseFirestore.instance.collection('products').get();
+      final snapshot = await FirebaseFirestore.instanceFor(
+        app: Firebase.app(),
+        databaseId: 'flowmart', // 👈 تم التعديل لحرف صغير (ليطابق باقي التطبيق)
+      ).collection('products').get();
 
-      final products =
-          snapshot.docs.map((doc) => Product.fromFirestore(doc)).toList();
+      // تحويل البيانات
+      final products = snapshot.docs.map((doc) {
+        final data = doc.data();
+        return Product(
+          id: doc.id,
+          name: data['name'] ?? 'Unknown',
+          price: (data['price'] ?? 0).toDouble(),
+          imageUrl: data['imageUrl'] ?? '',
+          description: data['description'] ?? '',
+        );
+      }).toList();
 
       if (mounted) {
         setState(() {
@@ -59,7 +72,6 @@ class _SearchPageState extends State<SearchPage> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        // يمكنك إظهار رسالة خطأ هنا
       }
       debugPrint("Error fetching products: $e");
     }
@@ -78,7 +90,6 @@ class _SearchPageState extends State<SearchPage> {
 
     setState(() {
       _hasSearched = true;
-      // ✅ التصفية تتم محلياً من القائمة المحملة من الفايربيس
       _filteredProducts = _allProducts.where((product) {
         final queryLower = query.toLowerCase();
         final nameLower = product.name.toLowerCase();
@@ -93,7 +104,6 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   // --- Actions ---
-  // ✅ تم تفعيل الأكشنز لتعمل مثل الصفحة الرئيسية
   void _onLike(Product product, ProductProvider provider) {
     final user = FirebaseAuth.instance.currentUser;
     provider.toggleLike(product.id);
@@ -105,7 +115,7 @@ class _SearchPageState extends State<SearchPage> {
   void _onAddToCart(String productId, ProductProvider provider) {
     provider.toggleCart(productId);
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+      const SnackBar(
           content: Text('Updated cart'), duration: Duration(milliseconds: 500)),
     );
   }
@@ -131,8 +141,7 @@ class _SearchPageState extends State<SearchPage> {
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-    final productProvider =
-        Provider.of<ProductProvider>(context); // ✅ استدعاء البروفايدر
+    final productProvider = Provider.of<ProductProvider>(context);
 
     final isDark = themeProvider.currentTheme == AppTheme.dark;
     final isGirlie = themeProvider.currentTheme == AppTheme.girlie;
@@ -203,7 +212,6 @@ class _SearchPageState extends State<SearchPage> {
             ),
             onSubmitted: _performSearch,
             onChanged: (val) {
-              // ✅ بحث فوري أثناء الكتابة (اختياري)
               _performSearch(val);
             },
           ),
@@ -225,7 +233,6 @@ class _SearchPageState extends State<SearchPage> {
 
   Widget _buildResults(
       bool isDark, bool isGirlie, ProductProvider productProvider) {
-    // إذا كان جاري تحميل البيانات من الفايربيس لأول مرة
     if (_isLoading && _allProducts.isEmpty) {
       return _buildLoadingState();
     }
@@ -270,20 +277,26 @@ class _SearchPageState extends State<SearchPage> {
           child: GestureDetector(
             onDoubleTap: () => _onLike(product, productProvider),
             child: ProductCard(
-              product: product, // نمرر المنتج الصحيح
-
-              // ✅ ربط الحالة بالبروفايدر
+              product: product,
               isLiked: productProvider.likedProducts.contains(product.id),
               isInCart: productProvider.cartProducts.contains(product.id),
-
               onLike: () => _onLike(product, productProvider),
               onAddToCart: () => _onAddToCart(product.id, productProvider),
-
-              // ✅ تفعيل الشات
               onChat: () => _onChat(product),
-
               onComment: () {},
-              onArTap: () {},
+
+              // ✅ تفعيل زر الـ AR
+              onArTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ArViewPage(
+                      modelUrl:
+                          'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         );
