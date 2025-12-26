@@ -70,7 +70,6 @@ class _HomePageState extends State<HomePage> {
       body: Stack(
         children: [
           StreamBuilder<QuerySnapshot>(
-            // ✅ الاتصال بقاعدة flowmart
             stream: FirebaseFirestore.instanceFor(
               app: Firebase.app(),
               databaseId: 'flowmart',
@@ -78,10 +77,14 @@ class _HomePageState extends State<HomePage> {
                 .collection('products')
                 .orderBy('createdAt', descending: true)
                 .snapshots(),
-
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
+              }
+
+              if (snapshot.hasError) {
+                return Center(
+                    child: Text("خطأ في جلب البيانات: ${snapshot.error}"));
               }
 
               if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
@@ -96,27 +99,28 @@ class _HomePageState extends State<HomePage> {
                 itemCount: docs.length,
                 itemBuilder: (context, index) {
                   final data = docs[index].data() as Map<String, dynamic>;
-                  final String sellerId = data['sellerId'] ?? '';
+
+                  // ✅ الحل النهائي: تحويل القيم لنصوص باستخدام .toString() لتجنب خطأ الـ int
+                  final String sellerId = (data['sellerId'] ?? '').toString();
                   final String sellerName =
-                      data['sellerName'] ?? 'ناشر غير معروف';
+                      (data['sellerName'] ?? 'ناشر غير معروف').toString();
+                  final String productId = docs[index].id.toString();
 
                   final product = Product(
-                    id: docs[index].id,
-                    name: data['name'] ?? '',
+                    id: productId,
+                    name: (data['name'] ?? '').toString(),
                     price: (data['price'] ?? 0).toDouble(),
-                    imageUrl: data['imageUrl'] ?? '',
-                    description: data['description'] ?? '',
+                    imageUrl: (data['imageUrl'] ?? '').toString(),
+                    description: (data['description'] ?? '').toString(),
                   );
 
-                  // ✅ إضافة خاصية السحب يميناً ويساراً لفتح الدردشة
                   return Dismissible(
-                    key: Key(product.id),
+                    key: Key(productId),
                     direction: DismissDirection.horizontal,
                     confirmDismiss: (direction) async {
                       if (user == null) {
                         _showLoginWarning(context);
                       } else {
-                        // فتح الدردشة
                         context.push(AppRoutes.chat, extra: {
                           'receiverUserID': sellerId,
                           'receiverUserEmail': sellerName,
@@ -127,7 +131,7 @@ class _HomePageState extends State<HomePage> {
                           }
                         });
                       }
-                      return false; // لكي لا تختفي البطاقة
+                      return false;
                     },
                     background: _buildSwipeBackground(Alignment.centerLeft),
                     secondaryBackground:
@@ -136,12 +140,12 @@ class _HomePageState extends State<HomePage> {
                       product: product,
                       sellerName: sellerName,
                       isLiked:
-                          productProvider.likedProducts.contains(product.id),
+                          productProvider.likedProducts.contains(productId),
                       onLike: () {
                         if (user == null) {
                           _showLoginWarning(context);
                         } else {
-                          productProvider.toggleLike(product.id);
+                          productProvider.toggleLike(productId);
                         }
                       },
                       onChat: () {
@@ -184,7 +188,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ✅ واجهة الخلفية عند السحب
   Widget _buildSwipeBackground(Alignment alignment) {
     return Container(
       alignment: alignment,
