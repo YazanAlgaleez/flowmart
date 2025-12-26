@@ -1,20 +1,24 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart'; // ضروري لـ instanceFor
 import 'package:flutter/material.dart';
 
 class ChatService extends ChangeNotifier {
-  // الحصول على نسخة من الفايربيز
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // إرسال رسالة
-  Future<void> sendMessage(String receiverId, String message) async {
-    // 1. معرفة مين اللي بيبعت (المستخدم الحالي)
+  // ✅ الاتصال بقاعدة البيانات المخصصة flowmart
+  final FirebaseFirestore _firestore = FirebaseFirestore.instanceFor(
+    app: Firebase.app(),
+    databaseId: 'flowmart',
+  );
+
+  Future<void> sendMessage(
+      String receiverId, String message, String receiverName) async {
     final String currentUserId = _firebaseAuth.currentUser!.uid;
     final String currentUserEmail = _firebaseAuth.currentUser!.email.toString();
     final Timestamp timestamp = Timestamp.now();
 
-    // 2. إنشاء كائن الرسالة
+    // 1. إنشاء كائن الرسالة
     Map<String, dynamic> newMessage = {
       'senderId': currentUserId,
       'senderEmail': currentUserEmail,
@@ -23,22 +27,43 @@ class ChatService extends ChangeNotifier {
       'timestamp': timestamp,
     };
 
-    // 3. إنشاء معرف غرفة محادثة فريد (ترتيب الايديهات عشان يكون نفسه للطرفين)
+    // 2. إنشاء معرف غرفة المحادثة
     List<String> ids = [currentUserId, receiverId];
-    ids.sort(); // ترتيب أبجدي لضمان التوافق
-    String chatRoomId = ids.join("_"); // مثال: user1_user2
+    ids.sort();
+    String chatRoomId = ids.join("_");
 
-    // 4. حفظ الرسالة في الداتابيس
+    // 3. حفظ الرسالة في الغرفة
     await _firestore
         .collection('chat_rooms')
         .doc(chatRoomId)
         .collection('messages')
         .add(newMessage);
+
+    // 4. ✅ تحديث "سجل المحادثات" عند المرسل والمستقبل
+    // لضمان ظهور المحادثة في قائمة ChatHistoryScreen
+    await _updateChatHistory(
+        currentUserId, receiverId, receiverName, message, timestamp);
+    await _updateChatHistory(receiverId, currentUserId,
+        currentUserEmail.split('@')[0], message, timestamp);
   }
 
-  // استقبال الرسائل (بث مباشر)
+  // دالة مساعدة لتحديث السجل
+  Future<void> _updateChatHistory(String ownerId, String peerId,
+      String peerName, String lastMsg, Timestamp time) async {
+    await _firestore
+        .collection('users')
+        .doc(ownerId)
+        .collection('chats')
+        .doc(peerId) // نستخدم ID الطرف الآخر كـ Doc ID ليسهل الوصول إليه
+        .set({
+      'peerId': peerId,
+      'peerName': peerName,
+      'lastMessage': lastMsg,
+      'timestamp': time,
+    }, SetOptions(merge: true));
+  }
+
   Stream<QuerySnapshot> getMessages(String userId, String otherUserId) {
-    // بناء نفس معرف الغرفة
     List<String> ids = [userId, otherUserId];
     ids.sort();
     String chatRoomId = ids.join("_");
@@ -47,7 +72,7 @@ class ChatService extends ChangeNotifier {
         .collection('chat_rooms')
         .doc(chatRoomId)
         .collection('messages')
-        .orderBy('timestamp', descending: false) // ترتيب حسب الوقت
+        .orderBy('timestamp', descending: false)
         .snapshots();
   }
 }

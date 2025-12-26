@@ -1,11 +1,10 @@
 // 📂 المسار: lib/core/routing/app_routing.dart
 
-import 'package:flowmart/core/routing/app_routing.dart';
-import 'package:flutter/material.dart'; // ✅ ضروري جداً من أجل GlobalKey
+import 'package:flutter/material.dart';
 import 'package:email_otp/email_otp.dart';
 import 'package:go_router/go_router.dart';
 
-// استدعاء ملف الثوابت
+// ✅ تم حذف سطر الاستيراد المتعارض
 
 // استدعاء الصفحات
 import 'package:flowmart/pages/chat_history_screen.dart';
@@ -21,16 +20,29 @@ import 'package:flowmart/pages/search_page.dart';
 import 'package:flowmart/pages/test_page.dart';
 import 'package:flowmart/pages/upload_page.dart';
 
+// ✅ أضف كلاس AppRoutes هنا إذا لم يكن موجوداً في ملف منفصل
+class AppRoutes {
+  static const String onboarding = '/onboarding';
+  static const String home = '/home';
+  static const String login = '/login';
+  static const String register = '/register';
+  static const String otp = '/otp';
+  static const String forgotPassword = '/forgotPassword';
+  static const String chatHistory = '/chatHistory';
+  static const String newPassword = '/newPassword';
+  static const String test = '/test';
+  static const String search = '/search';
+  static const String spacingWidgets = '/spacingWidgets';
+  static const String chat = '/chat';
+  static const String upload = '/upload';
+}
+
 class AppRouter {
-  // ✅ 1. تعريف مفتاح التنقل العام (Global Key)
-  // هذا المفتاح سيسمح لنا بالوصول للنافجيتر من أي مكان في التطبيق (بما في ذلك الزر العائم)
   static final GlobalKey<NavigatorState> navigatorKey =
       GlobalKey<NavigatorState>();
 
   static final GoRouter router = GoRouter(
-    // ✅ 2. ربط المفتاح بالراوتر
     navigatorKey: navigatorKey,
-
     initialLocation: AppRoutes.home,
     routes: [
       GoRoute(
@@ -84,15 +96,19 @@ class AppRouter {
         path: AppRoutes.chat,
         builder: (context, state) {
           final map = state.extra as Map<String, dynamic>? ?? {};
+          // ✅ التأكد من جلب المفاتيح الصحيحة التي نرسلها من HomePage
           return ChatPage(
-            receiverUserID: map['id'] ?? '',
-            receiverUserEmail: map['name'] ?? map['email'] ?? 'Unknown',
+            receiverUserID: map['receiverUserID'] ?? map['id'] ?? '',
+            receiverUserEmail:
+                map['receiverUserEmail'] ?? map['name'] ?? 'ناشر',
+            productDetails:
+                map['productDetails'], // إضافة تفاصيل المنتج إذا وجدت
           );
         },
       ),
       GoRoute(
         path: AppRoutes.upload,
-        builder: (context, state) => UploadPage(),
+        builder: (context, state) => const UploadPage(),
       ),
     ],
   );

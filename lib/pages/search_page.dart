@@ -4,14 +4,11 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flowmart/core/providers/product_provider.dart';
 import 'package:flowmart/core/providers/theme_provider.dart';
 import 'package:flowmart/core/routing/app_routing.dart';
-import 'package:flowmart/core/styling/app_colors.dart';
-import 'package:flowmart/core/styling/app_fonts.dart';
 import 'package:flowmart/core/styling/app_themes.dart';
 import 'package:flowmart/core/widgets/product_card.dart';
 import 'package:flowmart/core/widgets/watermark_widget.dart';
 import 'package:flowmart/models/product.dart';
-import 'package:flowmart/pages/ar_view_page.dart'; // ✅ تأكد من استدعاء صفحة AR
-import 'package:flowmart/services/firebase_service.dart';
+import 'package:flowmart/pages/ar_view_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
@@ -26,10 +23,9 @@ class SearchPage extends StatefulWidget {
 
 class _SearchPageState extends State<SearchPage> {
   final TextEditingController _searchController = TextEditingController();
-  final FirebaseService _firebaseService = FirebaseService();
-
-  List<Product> _allProducts = []; // القائمة الكاملة
-  List<Product> _filteredProducts = []; // نتائج البحث
+  List<Map<String, dynamic>> _allRawData = [];
+  List<Product> _allProducts = [];
+  List<Product> _filteredProducts = [];
   bool _isLoading = true;
   bool _hasSearched = false;
 
@@ -37,23 +33,21 @@ class _SearchPageState extends State<SearchPage> {
   void initState() {
     super.initState();
     _fetchProductsFromFirebase();
-
-    _searchController.addListener(() {
-      setState(() {});
-    });
+    _searchController.addListener(() => setState(() {}));
   }
 
-  // ✅ جلب البيانات من قاعدة flowmart
   Future<void> _fetchProductsFromFirebase() async {
     try {
       final snapshot = await FirebaseFirestore.instanceFor(
         app: Firebase.app(),
-        databaseId: 'flowmart', // 👈 تم التعديل لحرف صغير (ليطابق باقي التطبيق)
+        databaseId: 'flowmart',
       ).collection('products').get();
 
-      // تحويل البيانات
       final products = snapshot.docs.map((doc) {
         final data = doc.data();
+        data['id'] = doc.id;
+        _allRawData.add(data);
+
         return Product(
           id: doc.id,
           name: data['name'] ?? 'Unknown',
@@ -70,16 +64,11 @@ class _SearchPageState extends State<SearchPage> {
         });
       }
     } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-      debugPrint("Error fetching products: $e");
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   void _performSearch(String query) {
-    FocusScope.of(context).unfocus();
-
     if (query.isEmpty) {
       setState(() {
         _filteredProducts = [];
@@ -87,143 +76,72 @@ class _SearchPageState extends State<SearchPage> {
       });
       return;
     }
-
     setState(() {
       _hasSearched = true;
       _filteredProducts = _allProducts.where((product) {
-        final queryLower = query.toLowerCase();
-        final nameLower = product.name.toLowerCase();
-        return nameLower.contains(queryLower);
+        return product.name.toLowerCase().contains(query.toLowerCase());
       }).toList();
     });
   }
 
-  void _clearSearch() {
-    _searchController.clear();
-    _performSearch('');
-  }
-
-  // --- Actions ---
-  void _onLike(Product product, ProductProvider provider) {
-    final user = FirebaseAuth.instance.currentUser;
-    provider.toggleLike(product.id);
-    if (user != null) {
-      _firebaseService.addUserInterest(user.uid, "search_interest");
-    }
-  }
-
-  void _onAddToCart(String productId, ProductProvider provider) {
-    provider.toggleCart(productId);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-          content: Text('Updated cart'), duration: Duration(milliseconds: 500)),
+  void _showLoginWarning(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("تنبيه"),
+        content: const Text("يرجى تسجيل الدخول للقيام بهذا الإجراء"),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("إلغاء")),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.push(AppRoutes.login);
+            },
+            child: const Text("دخول"),
+          ),
+        ],
+      ),
     );
-  }
-
-  void _onChat(Product product) {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text("Login required")));
-      return;
-    }
-    context.push(AppRoutes.chat, extra: {
-      'id': product.id,
-      'name': product.name,
-      'product': {
-        'name': product.name,
-        'price': product.price,
-        'image': product.imageUrl
-      }
-    });
   }
 
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final productProvider = Provider.of<ProductProvider>(context);
-
     final isDark = themeProvider.currentTheme == AppTheme.dark;
     final isGirlie = themeProvider.currentTheme == AppTheme.girlie;
-
-    final Color backgroundColor = isDark
-        ? const Color(0xFF0D0D0D)
-        : isGirlie
-            ? const Color(0xFFFFF0F5)
-            : AppColors.whiteColor;
-
-    final Color appBarColor = isDark
-        ? const Color(0xFF1A1A1A)
-        : isGirlie
-            ? const Color(0xFFFF69B4)
-            : Colors.blue;
-
-    final Color iconColor = isDark
-        ? Colors.white
-        : isGirlie
-            ? const Color(0xFF8B008B)
-            : Colors.white;
-
-    final Color textColor = isDark
-        ? Colors.white
-        : isGirlie
-            ? const Color(0xFF8B008B)
-            : AppColors.blackColor;
-
-    final Color hintColor = isDark
-        ? Colors.white.withOpacity(0.7)
-        : isGirlie
-            ? const Color(0xFFDA70D6)
-            : AppColors.secondaryColor;
+    final user = FirebaseAuth.instance.currentUser;
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
-        backgroundColor: backgroundColor,
+        backgroundColor: isDark
+            ? const Color(0xFF0D0D0D)
+            : (isGirlie ? const Color(0xFFFFF0F5) : Colors.white),
         appBar: AppBar(
-          backgroundColor: appBarColor,
-          iconTheme: IconThemeData(color: iconColor),
+          backgroundColor: isDark
+              ? const Color(0xFF1A1A1A)
+              : (isGirlie ? Colors.pink : Colors.blue),
           title: TextField(
             controller: _searchController,
-            textInputAction: TextInputAction.search,
-            style: TextStyle(
-              color: textColor,
-              fontSize: 16.sp,
-              fontFamily: AppFonts.mainFontName,
-            ),
-            decoration: InputDecoration(
-              hintText: 'Search for a product...',
-              hintStyle: TextStyle(
-                color: hintColor,
-                fontSize: 16.sp,
-                fontFamily: AppFonts.mainFontName,
-              ),
+            style: const TextStyle(color: Colors.white),
+            decoration: const InputDecoration(
+              hintText: 'ابحث عن منتج...',
+              hintStyle: TextStyle(color: Colors.white70),
               border: InputBorder.none,
-              prefixIcon: Icon(Icons.search,
-                  color: iconColor.withOpacity(0.7), size: 24.sp),
-              suffixIcon: _searchController.text.isNotEmpty
-                  ? IconButton(
-                      icon: Icon(Icons.clear, color: iconColor),
-                      onPressed: _clearSearch,
-                    )
-                  : null,
-              contentPadding:
-                  EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+              prefixIcon: Icon(Icons.search, color: Colors.white70),
             ),
             onSubmitted: _performSearch,
-            onChanged: (val) {
-              _performSearch(val);
-            },
+            onChanged: _performSearch,
           ),
         ),
         body: Stack(
           children: [
-            Column(
-              children: [
-                Expanded(
-                    child: _buildResults(isDark, isGirlie, productProvider))
-              ],
-            ),
+            _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _buildResults(productProvider, user),
             const WatermarkWidget(),
           ],
         ),
@@ -231,121 +149,89 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  Widget _buildResults(
-      bool isDark, bool isGirlie, ProductProvider productProvider) {
-    if (_isLoading && _allProducts.isEmpty) {
-      return _buildLoadingState();
-    }
-
-    if (!_hasSearched && _searchController.text.isEmpty) {
-      return _buildInitialState(isDark, isGirlie);
-    }
-
-    if (_filteredProducts.isEmpty) {
-      return _buildNoResultsState(isDark, isGirlie);
-    }
+  Widget _buildResults(ProductProvider productProvider, User? user) {
+    if (!_hasSearched)
+      return _buildCenterInfo(Icons.search, "ابدأ البحث عن منتجات");
+    if (_filteredProducts.isEmpty)
+      return _buildCenterInfo(Icons.search_off, "لم يتم العثور على نتائج");
 
     return PageView.builder(
       scrollDirection: Axis.vertical,
       itemCount: _filteredProducts.length,
       itemBuilder: (context, index) {
         final product = _filteredProducts[index];
+        final rawData =
+            _allRawData.firstWhere((element) => element['id'] == product.id);
+        final sellerId = rawData['sellerId'] ?? '';
+        final sellerName = rawData['sellerName'] ?? 'ناشر';
 
         return Dismissible(
-          key: Key(product.id),
-          direction: DismissDirection.endToStart,
-          onDismissed: (direction) {
-            setState(() {
-              _filteredProducts.removeAt(index);
-            });
-            _onAddToCart(product.id, productProvider);
+          key: Key("search_${product.id}"),
+          direction: DismissDirection.horizontal,
+          confirmDismiss: (direction) async {
+            if (user == null) {
+              _showLoginWarning(context);
+            } else {
+              context.push(AppRoutes.chat, extra: {
+                'receiverUserID': sellerId,
+                'receiverUserEmail': sellerName,
+                'productDetails': {
+                  'name': product.name,
+                  'price': product.price,
+                  'image': product.imageUrl
+                }
+              });
+            }
+            return false;
           },
-          background: Container(
-            alignment: Alignment.centerRight,
-            padding: EdgeInsets.only(right: 20.w),
-            color: AppColors.primaryColor,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.add_shopping_cart, color: Colors.white, size: 40.sp),
-                SizedBox(height: 8.h),
-                Text('Add to Cart',
-                    style: TextStyle(color: Colors.white, fontSize: 14.sp)),
-              ],
-            ),
-          ),
-          child: GestureDetector(
-            onDoubleTap: () => _onLike(product, productProvider),
-            child: ProductCard(
-              product: product,
-              isLiked: productProvider.likedProducts.contains(product.id),
-              isInCart: productProvider.cartProducts.contains(product.id),
-              onLike: () => _onLike(product, productProvider),
-              onAddToCart: () => _onAddToCart(product.id, productProvider),
-              onChat: () => _onChat(product),
-              onComment: () {},
-
-              // ✅ تفعيل زر الـ AR
-              onArTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ArViewPage(
-                      modelUrl:
-                          'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
-                    ),
-                  ),
-                );
-              },
-            ),
+          background: _buildSwipeBg(Alignment.centerLeft),
+          secondaryBackground: _buildSwipeBg(Alignment.centerRight),
+          child: ProductCard(
+            product: product,
+            sellerName: sellerName,
+            isLiked: productProvider.likedProducts.contains(product.id),
+            onLike: () => user == null
+                ? _showLoginWarning(context)
+                : productProvider.toggleLike(product.id),
+            onChat: () {
+              if (user == null) {
+                _showLoginWarning(context);
+              } else {
+                context.push(AppRoutes.chat, extra: {
+                  'receiverUserID': sellerId,
+                  'receiverUserEmail': sellerName,
+                });
+              }
+            },
+            onArTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const ArViewPage(
+                        modelUrl:
+                            'https://modelviewer.dev/shared-assets/models/Astronaut.glb'))),
+            onComment: () {}, // ✅ تمت إضافة الوسيط المطلوب هنا
           ),
         );
       },
     );
   }
 
-  Widget _buildInitialState(bool isDark, bool isGirlie) {
-    final color = isDark
-        ? Colors.white.withOpacity(0.5)
-        : isGirlie
-            ? const Color(0xFFDA70D6).withOpacity(0.5)
-            : AppColors.secondaryColor.withOpacity(0.5);
+  Widget _buildSwipeBg(Alignment alignment) {
+    return Container(
+      alignment: alignment,
+      padding: EdgeInsets.symmetric(horizontal: 30.w),
+      color: Colors.blue.withOpacity(0.2),
+      child: const Icon(Icons.chat, color: Colors.white, size: 40),
+    );
+  }
 
+  Widget _buildCenterInfo(IconData icon, String text) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.search, color: color, size: 80.sp),
-          SizedBox(height: 20.h),
-          Text('Search for products',
-              style: TextStyle(color: color.withOpacity(0.7), fontSize: 18.sp)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLoadingState() {
-    return Center(
-      child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryColor)),
-    );
-  }
-
-  Widget _buildNoResultsState(bool isDark, bool isGirlie) {
-    final color = isDark
-        ? Colors.white.withOpacity(0.5)
-        : isGirlie
-            ? const Color(0xFFDA70D6).withOpacity(0.5)
-            : AppColors.secondaryColor.withOpacity(0.5);
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.search_off, color: color, size: 80.sp),
-          SizedBox(height: 20.h),
-          Text('No products found',
-              style: TextStyle(color: color.withOpacity(0.7), fontSize: 18.sp)),
+          Icon(icon, color: Colors.grey, size: 80.sp),
+          Text(text, style: const TextStyle(color: Colors.grey, fontSize: 18)),
         ],
       ),
     );

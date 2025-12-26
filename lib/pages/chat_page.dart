@@ -1,14 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flowmart/core/providers/theme_provider.dart'; // ✅ تأكد من المسار
-import 'package:flowmart/core/styling/app_themes.dart'; // ✅ تأكد من المسار لـ AppTheme Enum
+import 'package:firebase_core/firebase_core.dart'; // ✅ أضفنا هذا للاتصال بـ flowmart
+import 'package:flowmart/core/providers/theme_provider.dart';
+import 'package:flowmart/core/styling/app_themes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart'; // ✅ ضروري للوصول للثيم
+import 'package:provider/provider.dart';
 import '../services/chat_service.dart';
-import '../core/widgets/chat_bubble.dart';
 
 class ChatPage extends StatefulWidget {
   final String receiverUserEmail;
@@ -41,55 +41,50 @@ class _ChatPageState extends State<ChatPage> {
 
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
+      _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
     }
   }
 
+  // ✅ تعديل دالة الإرسال لتدعم السجل والاسم
   void sendMessage() async {
     if (_messageController.text.trim().isNotEmpty) {
+      String messageText = _messageController.text.trim();
+      _messageController.clear(); // مسح الحقل فوراً لتجربة مستخدم أفضل
+
+      // استخراج الاسم من الإيميل (أو اسم الناشر)
+      String receiverName = widget.receiverUserEmail.split('@')[0];
+
       await _chatService.sendMessage(
         widget.receiverUserID,
-        _messageController.text.trim(),
+        messageText,
+        receiverName, // مررنا الاسم ليحفظ في سجل المحادثات
       );
-      _messageController.clear();
+
       _scrollToBottom();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // ✅ 1. الوصول للثيم الحالي
     final themeProvider = Provider.of<ThemeProvider>(context);
     final currentTheme = themeProvider.currentTheme;
-
-    // ✅ 2. تحديد الألوان بناءً على الثيم
     final bool isDark = currentTheme == AppTheme.dark;
     final bool isGirlie = currentTheme == AppTheme.girlie;
-
-    // اللون الرئيسي: وردي للـ Girlie، وأزرق للباقي
     final Color mainColor = isGirlie ? Colors.pink : Colors.blueAccent;
-
-    // لون خلفية فقاعة "الطرف الآخر"
     final Color receiverBubbleColor = isDark
         ? Colors.grey[800]!
         : (isGirlie ? Colors.pink[50]! : Colors.grey[200]!);
 
     return Scaffold(
-      // الخلفية تؤخذ تلقائياً من ThemeData الذي عرفته في AppThemes
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
+        elevation: 0,
         backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         title: Row(
           children: [
             CircleAvatar(
               radius: 18.r,
               backgroundColor: mainColor.withOpacity(0.2),
-              backgroundImage:
-                  const AssetImage('assets/images/user_placeholder.png'),
               child: Icon(Icons.person, color: mainColor),
             ),
             SizedBox(width: 10.w),
@@ -97,13 +92,14 @@ class _ChatPageState extends State<ChatPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  widget.receiverUserEmail.split('@')[0],
+                  widget.receiverUserEmail.split('@')[0], // اسم الناشر
                   style: TextStyle(
                       fontSize: 16.sp,
+                      fontWeight: FontWeight.bold,
                       color: Theme.of(context).textTheme.bodyLarge?.color),
                 ),
-                Text('Online',
-                    style: TextStyle(color: Colors.green, fontSize: 12.sp)),
+                Text('متصل الآن',
+                    style: TextStyle(color: Colors.green, fontSize: 11.sp)),
               ],
             ),
           ],
@@ -111,43 +107,29 @@ class _ChatPageState extends State<ChatPage> {
       ),
       body: Column(
         children: [
-          // عرض بطاقة المنتج
           if (widget.productDetails != null)
             _buildProductCard(isDark, mainColor),
-
-          // قائمة الرسائل
           Expanded(
             child: _buildMessageList(mainColor, receiverBubbleColor, isDark),
           ),
-
-          // حقل الإدخال
           _buildMessageInput(isDark, mainColor),
         ],
       ),
     );
   }
 
-  // 🔥 بطاقة المنتج
+  // 🔥 بطاقة المنتج (التي تظهر في أعلى المحادثة)
   Widget _buildProductCard(bool isDark, Color mainColor) {
     final product = widget.productDetails!;
-
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(10.w),
-      margin: EdgeInsets.all(10.w),
+      margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
       decoration: BoxDecoration(
-        color: isDark ? Colors.grey[850] : Colors.white,
+        color: isDark ? Colors.grey[900] : Colors.white,
         borderRadius: BorderRadius.circular(12.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 5,
-            offset: const Offset(0, 2),
-          ),
-        ],
-        border: Border.all(
-          color: isDark ? Colors.grey[700]! : mainColor.withOpacity(0.3),
-        ),
+        border: Border.all(color: mainColor.withOpacity(0.2)),
+        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)],
       ),
       child: Row(
         children: [
@@ -155,11 +137,11 @@ class _ChatPageState extends State<ChatPage> {
             borderRadius: BorderRadius.circular(8.r),
             child: Image.network(
               product['image'] ?? '',
-              width: 50.w,
-              height: 50.w,
+              width: 45.w,
+              height: 45.w,
               fit: BoxFit.cover,
-              errorBuilder: (ctx, err, stack) =>
-                  Icon(Icons.image, size: 40, color: Colors.grey),
+              errorBuilder: (_, __, ___) =>
+                  Icon(Icons.image, color: Colors.grey),
             ),
           ),
           SizedBox(width: 12.w),
@@ -167,24 +149,14 @@ class _ChatPageState extends State<ChatPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  "بخصوص: ${product['name']}",
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14.sp,
-                    color: isDark ? Colors.white : Colors.black87,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  "${product['price']} JOD",
-                  style: TextStyle(
-                    color: mainColor, // ✅ السعر يأخذ لون الثيم
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14.sp,
-                  ),
-                ),
+                Text("بخصوص: ${product['name']}",
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 13.sp)),
+                Text("${product['price']} JOD",
+                    style: TextStyle(
+                        color: mainColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13.sp)),
               ],
             ),
           ),
@@ -195,21 +167,30 @@ class _ChatPageState extends State<ChatPage> {
 
   Widget _buildMessageList(
       Color mainColor, Color receiverBubbleColor, bool isDark) {
-    return StreamBuilder(
-      stream: _chatService.getMessages(
-          widget.receiverUserID, _firebaseAuth.currentUser!.uid),
+    // ✅ القراءة من قاعدة flowmart مباشرة
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instanceFor(
+        app: Firebase.app(),
+        databaseId: 'flowmart',
+      )
+          .collection('chat_rooms')
+          .doc(_getChatRoomId(
+              widget.receiverUserID, _firebaseAuth.currentUser!.uid))
+          .collection('messages')
+          .orderBy('timestamp', descending: false)
+          .snapshots(),
       builder: (context, snapshot) {
-        if (snapshot.hasError) return const Center(child: Text('Error'));
-        if (snapshot.connectionState == ConnectionState.waiting) {
+        if (snapshot.hasError)
+          return const Center(child: Text('حدث خطأ في تحميل الرسائل'));
+        if (snapshot.connectionState == ConnectionState.waiting)
           return const Center(child: CircularProgressIndicator());
-        }
 
         SchedulerBinding.instance
             .addPostFrameCallback((_) => _scrollToBottom());
 
         return ListView(
           controller: _scrollController,
-          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 10.h),
+          padding: EdgeInsets.all(12.w),
           children: snapshot.data!.docs
               .map((doc) => _buildMessageItem(
                   doc, mainColor, receiverBubbleColor, isDark))
@@ -217,6 +198,13 @@ class _ChatPageState extends State<ChatPage> {
         );
       },
     );
+  }
+
+  // دالة مساعدة للحصول على معرف الغرفة (نفس المنطق في الخدمة)
+  String _getChatRoomId(String user1, String user2) {
+    List<String> ids = [user1, user2];
+    ids.sort();
+    return ids.join("_");
   }
 
   Widget _buildMessageItem(DocumentSnapshot document, Color mainColor,
@@ -236,28 +224,33 @@ class _ChatPageState extends State<ChatPage> {
         children: [
           Container(
             padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
-            margin: EdgeInsets.symmetric(vertical: 4.h),
+            margin: EdgeInsets.symmetric(vertical: 2.h),
+            constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.75),
             decoration: BoxDecoration(
-              // ✅ لون الفقاعة يعتمد على الثيم المختار
               color: isCurrentUser ? mainColor : receiverBubbleColor,
-              borderRadius: BorderRadius.circular(16.r),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(16.r),
+                topRight: Radius.circular(16.r),
+                bottomLeft: isCurrentUser ? Radius.circular(16.r) : Radius.zero,
+                bottomRight:
+                    isCurrentUser ? Radius.zero : Radius.circular(16.r),
+              ),
             ),
             child: Text(
               data['message'],
               style: TextStyle(
-                // النص أبيض إذا أنا المرسل، أو إذا كان الوضع ليلي
-                // أسود إذا كان الطرف الآخر والوضع فاتح/جيرلي
                 color: isCurrentUser
                     ? Colors.white
                     : (isDark ? Colors.white : Colors.black87),
-                fontSize: 15.sp,
+                fontSize: 14.sp,
               ),
             ),
           ),
           Padding(
             padding: EdgeInsets.only(bottom: 8.h, left: 4.w, right: 4.w),
             child: Text(formattedTime,
-                style: TextStyle(color: Colors.grey, fontSize: 10.sp)),
+                style: TextStyle(color: Colors.grey, fontSize: 9.sp)),
           ),
         ],
       ),
@@ -267,36 +260,39 @@ class _ChatPageState extends State<ChatPage> {
   Widget _buildMessageInput(bool isDark, Color mainColor) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 12.h),
-      color: Theme.of(context).scaffoldBackgroundColor,
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        border: Border(top: BorderSide(color: Colors.grey.withOpacity(0.1))),
+      ),
       child: SafeArea(
         child: Row(
           children: [
             IconButton(
                 onPressed: () {},
-                icon: Icon(Icons.add_photo_alternate, color: mainColor)),
+                icon: Icon(Icons.add_circle_outline, color: mainColor)),
             Expanded(
               child: TextField(
                 controller: _messageController,
                 style: TextStyle(color: isDark ? Colors.white : Colors.black),
                 decoration: InputDecoration(
                   hintText: 'اكتب رسالتك...',
-                  hintStyle: TextStyle(color: Colors.grey),
                   filled: true,
-                  fillColor: isDark ? Colors.grey[800] : Colors.grey[100],
+                  fillColor: isDark ? Colors.grey[850] : Colors.grey[100],
                   border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(24.r),
+                      borderRadius: BorderRadius.circular(25.r),
                       borderSide: BorderSide.none),
                   contentPadding:
-                      EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+                      EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
                 ),
+                onSubmitted: (_) => sendMessage(),
               ),
             ),
             SizedBox(width: 8.w),
             GestureDetector(
               onTap: sendMessage,
               child: CircleAvatar(
-                backgroundColor: mainColor, // ✅ زر الإرسال يأخذ لون الثيم
-                child: Icon(Icons.send, color: Colors.white, size: 20.sp),
+                backgroundColor: mainColor,
+                child: Icon(Icons.send, color: Colors.white, size: 18.sp),
               ),
             ),
           ],
