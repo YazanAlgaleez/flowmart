@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flowmart/core/providers/locale_provider.dart'; // ✅
 import 'package:flowmart/core/providers/product_provider.dart';
 import 'package:flowmart/core/providers/theme_provider.dart';
 import 'package:flowmart/core/routing/app_routing.dart';
@@ -84,22 +85,23 @@ class _SearchPageState extends State<SearchPage> {
     });
   }
 
-  void _showLoginWarning(BuildContext context) {
+  // ✅ تمرير loc للترجمة
+  void _showLoginWarning(BuildContext context, AppLocalizations loc) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("تنبيه"),
-        content: const Text("يرجى تسجيل الدخول للقيام بهذا الإجراء"),
+        title: Text(loc.translate('alert')), // "تنبيه"
+        content: Text(loc.translate('login_msg')), // "يرجى تسجيل الدخول..."
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text("إلغاء")),
+              child: Text(loc.translate('cancel'))), // "إلغاء"
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               context.push(AppRoutes.login);
             },
-            child: const Text("دخول"),
+            child: Text(loc.translate('login')), // "دخول"
           ),
         ],
       ),
@@ -110,6 +112,9 @@ class _SearchPageState extends State<SearchPage> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final productProvider = Provider.of<ProductProvider>(context);
+    final localeProvider = Provider.of<LocaleProvider>(context); // ✅
+    final loc = AppLocalizations(localeProvider.locale); // ✅
+
     final isDark = themeProvider.currentTheme == AppTheme.dark;
     final isGirlie = themeProvider.currentTheme == AppTheme.girlie;
     final user = FirebaseAuth.instance.currentUser;
@@ -127,11 +132,11 @@ class _SearchPageState extends State<SearchPage> {
           title: TextField(
             controller: _searchController,
             style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(
-              hintText: 'ابحث عن منتج...',
-              hintStyle: TextStyle(color: Colors.white70),
+            decoration: InputDecoration(
+              hintText: loc.translate('search_hint'), // "ابحث عن منتج..."
+              hintStyle: const TextStyle(color: Colors.white70),
               border: InputBorder.none,
-              prefixIcon: Icon(Icons.search, color: Colors.white70),
+              prefixIcon: const Icon(Icons.search, color: Colors.white70),
             ),
             onSubmitted: _performSearch,
             onChanged: _performSearch,
@@ -141,7 +146,7 @@ class _SearchPageState extends State<SearchPage> {
           children: [
             _isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : _buildResults(productProvider, user),
+                : _buildResults(productProvider, user, loc), // ✅ تمرير loc
             const WatermarkWidget(),
           ],
         ),
@@ -149,11 +154,14 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  Widget _buildResults(ProductProvider productProvider, User? user) {
+  Widget _buildResults(
+      ProductProvider productProvider, User? user, AppLocalizations loc) {
     if (!_hasSearched)
-      return _buildCenterInfo(Icons.search, "ابدأ البحث عن منتجات");
+      return _buildCenterInfo(
+          Icons.search, loc.translate('start_search')); // "ابدأ البحث..."
     if (_filteredProducts.isEmpty)
-      return _buildCenterInfo(Icons.search_off, "لم يتم العثور على نتائج");
+      return _buildCenterInfo(
+          Icons.search_off, loc.translate('no_results')); // "لا توجد نتائج"
 
     return PageView.builder(
       scrollDirection: Axis.vertical,
@@ -163,14 +171,15 @@ class _SearchPageState extends State<SearchPage> {
         final rawData =
             _allRawData.firstWhere((element) => element['id'] == product.id);
         final sellerId = rawData['sellerId'] ?? '';
-        final sellerName = rawData['sellerName'] ?? 'ناشر';
+        final sellerName =
+            rawData['sellerName'] ?? loc.translate('unknown'); // "غير معروف"
 
         return Dismissible(
           key: Key("search_${product.id}"),
           direction: DismissDirection.horizontal,
           confirmDismiss: (direction) async {
             if (user == null) {
-              _showLoginWarning(context);
+              _showLoginWarning(context, loc); // ✅
             } else {
               context.push(AppRoutes.chat, extra: {
                 'receiverUserID': sellerId,
@@ -191,11 +200,11 @@ class _SearchPageState extends State<SearchPage> {
             sellerName: sellerName,
             isLiked: productProvider.likedProducts.contains(product.id),
             onLike: () => user == null
-                ? _showLoginWarning(context)
+                ? _showLoginWarning(context, loc) // ✅
                 : productProvider.toggleLike(product.id),
             onChat: () {
               if (user == null) {
-                _showLoginWarning(context);
+                _showLoginWarning(context, loc); // ✅
               } else {
                 context.push(AppRoutes.chat, extra: {
                   'receiverUserID': sellerId,
@@ -209,7 +218,7 @@ class _SearchPageState extends State<SearchPage> {
                     builder: (_) => const ArViewPage(
                         modelUrl:
                             'https://modelviewer.dev/shared-assets/models/Astronaut.glb'))),
-            onComment: () {}, // ✅ تمت إضافة الوسيط المطلوب هنا
+            onComment: () {},
           ),
         );
       },

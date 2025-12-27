@@ -11,6 +11,15 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # ✅ إعدادات اللغة (تم تحديث intl لحل مشاكل التوافق)
+  flutter_localizations:
+    sdk: flutter
+  intl: ^0.20.2
+
+  # ✅ التخزين المحلي (لجعل صفحة البداية تظهر مرة واحدة)
+  shared_preferences: ^2.2.2
+
+  # --- باقي المكتبات ---
   cupertino_icons: ^1.0.8
   flutter_screenutil: ^5.9.3
   video_player: ^2.8.6
@@ -30,6 +39,7 @@ dependencies:
   google_generative_ai: ^0.4.7
   firebase_ai: ^3.6.1
   audioplayers: ^6.5.1
+  file_picker: ^10.3.8
 
 dev_dependencies:
   flutter_test:
@@ -37,22 +47,24 @@ dev_dependencies:
   flutter_lints: ^5.0.0
   flutter_launcher_icons: ^0.13.1
 
-# --- إعدادات الأيقونة الجديدة (تم دمج الخلفية) ---
+# --- إعدادات أيقونة التطبيق ---
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
   image_path: "lib/assets/images/logo.jpg"
   min_sdk_android: 21
-  # 👇 هنا وضعنا لون كحلي غامق قريب من لون شعارك لدمج الحواف
   adaptive_icon_background: "#0B2447" 
   adaptive_icon_foreground: "lib/assets/images/logo.jpg"
 
 flutter:
   uses-material-design: true
 
+  # --- مجلدات الصور ---
   assets:
     - lib/assets/
+    - lib/assets/images/
 
+  # --- الخطوط ---
   fonts:
     - family: Urbanist
       fonts:

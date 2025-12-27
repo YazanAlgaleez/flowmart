@@ -1,4 +1,5 @@
 import 'package:email_otp/email_otp.dart';
+import 'package:flowmart/core/providers/locale_provider.dart'; // ✅
 import 'package:flowmart/core/providers/theme_provider.dart';
 import 'package:flowmart/core/routing/app_routing.dart';
 import 'package:flowmart/core/styling/app_styles.dart';
@@ -21,15 +22,14 @@ class ForgotPasswordPage extends StatefulWidget {
 class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
-  final EmailOTP myAuth = EmailOTP(); // كائن إرسال الرموز
+  final EmailOTP myAuth = EmailOTP();
   bool isLoading = false;
 
-  void _handleSendCode() async {
+  // ✅ نمرر loc للدالة لاستخدام الترجمة في الرسائل
+  void _handleSendCode(AppLocalizations loc) async {
     if (_formKey.currentState!.validate()) {
       setState(() => isLoading = true);
 
-      // 1. إرسال الكود مباشرة (بدون فحص Firebase المحذوف)
-      // هذا هو الكود المتوافق مع التحديثات الجديدة
       bool result = await EmailOTP.sendOTP(email: _emailController.text.trim());
 
       setState(() => isLoading = false);
@@ -37,17 +37,14 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       if (result) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Code sent successfully!")),
+            SnackBar(content: Text(loc.translate('code_sent'))), // ✅ تم الترجمة
           );
-          // الانتقال لصفحة OTP مع تمرير كائن myAuth
           context.push(AppRoutes.otp, extra: myAuth);
         }
       } else {
         if (mounted) {
-          // في حال فشل الإرسال (مشكلة نت أو سيرفر)
-          // لتجنب التعليق، سنسمح بالمرور في وضع المطور (اختياري)
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Simulating Send (Dev Mode)")),
+            SnackBar(content: Text(loc.translate('simulating_send'))), // ✅ تم الترجمة
           );
           context.push(AppRoutes.otp, extra: myAuth);
         }
@@ -64,11 +61,14 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final localeProvider = Provider.of<LocaleProvider>(context); // ✅
+    final loc = AppLocalizations(localeProvider.locale); // ✅
+
     final isDark = themeProvider.currentTheme == AppTheme.dark;
     final isGirlie = themeProvider.currentTheme == AppTheme.girlie;
 
     return Scaffold(
-      appBar: const AppbarWidget(title: "Forgot Password"),
+      appBar: AppbarWidget(title: loc.translate('forgot_password')), // ✅ تم الترجمة
       backgroundColor: isDark
           ? const Color(0xFF0D0D0D)
           : isGirlie
@@ -83,7 +83,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                 children: [
                   const Padding(padding: EdgeInsets.only(top: 50.0)),
                   Text(
-                    "Forgot Password?",
+                    loc.translate('forgot_password'), // ✅ تم الترجمة
                     style: AppStyles.primaryHeadLineStyle.copyWith(
                       color: isDark
                           ? Colors.white
@@ -96,7 +96,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20.0),
                     child: Text(
-                      "Don't worry! It happens. Please enter the email address linked with your account.",
+                      loc.translate('forgot_pass_msg'), // ✅ تم الترجمة
                       textAlign: TextAlign.center,
                       style: AppStyles.supTitleStyle.copyWith(
                         color: isDark
@@ -110,17 +110,17 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   const Padding(padding: EdgeInsets.only(top: 30.0)),
                   PrimaryTextfieldWidget(
                     controller: _emailController,
-                    hintText: "Enter Your Email",
+                    hintText: loc.translate('enter_email'), // ✅ تم الترجمة
                     keyboardType: TextInputType.emailAddress,
                     validator: (val) =>
-                        val!.contains('@') ? null : "Invalid Email",
+                        val!.contains('@') ? null : loc.translate('invalid_email'), // ✅ تم الترجمة
                   ),
                   const Padding(padding: EdgeInsets.only(top: 30.0)),
                   isLoading
                       ? const CircularProgressIndicator()
                       : PrimaryButtonWidget(
-                          buttonText: "Send Code",
-                          onPressed: _handleSendCode,
+                          buttonText: loc.translate('send_code'), // ✅ تم الترجمة
+                          onPressed: () => _handleSendCode(loc), // مررنا loc هنا
                         ),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -131,7 +131,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                           context.go(AppRoutes.home);
                         },
                         child: Text(
-                          "Home pages",
+                          loc.translate('home_pages'), // ✅ تم الترجمة
                           style: TextStyle(
                             color: isDark ? Colors.white70 : Colors.black54,
                           ),

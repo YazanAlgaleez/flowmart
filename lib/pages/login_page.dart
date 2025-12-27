@@ -1,3 +1,4 @@
+import 'package:flowmart/core/providers/locale_provider.dart'; // ✅
 import 'package:flowmart/core/providers/theme_provider.dart';
 import 'package:flowmart/core/routing/app_routing.dart';
 import 'package:flowmart/core/styling/app_styles.dart';
@@ -27,7 +28,8 @@ class _LoginPageState extends State<LoginPage> {
 
   bool isLoading = false;
 
-  void _handleLogin() async {
+  // ✅ نمرر loc لاستخدام الترجمة في الرسائل المنبثقة (SnackBar)
+  void _handleLogin(AppLocalizations loc) async {
     if (_formKey.currentState!.validate()) {
       setState(() => isLoading = true);
 
@@ -40,9 +42,8 @@ class _LoginPageState extends State<LoginPage> {
 
       if (result == null) {
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text("Login Successful!")));
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(loc.translate('login_success')))); // "تم تسجيل الدخول بنجاح"
           context.go(AppRoutes.home);
         }
       } else {
@@ -55,18 +56,17 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  void _handleGoogleLogin() async {
+  void _handleGoogleLogin(AppLocalizations loc) async {
     setState(() => isLoading = true);
-    final user = await AuthService().signIn(email: '', password: '');
+    final user = await AuthService().signIn(email: '', password: ''); // تأكد من منطق جوجل هنا
     setState(() => isLoading = false);
 
     if (user != null) {
       if (mounted) context.go(AppRoutes.home);
     } else {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text("Google Sign In Failed")));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(loc.translate('google_failed')))); // "فشل تسجيل الدخول عبر جوجل"
       }
     }
   }
@@ -81,16 +81,19 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final localeProvider = Provider.of<LocaleProvider>(context); // ✅
+    final loc = AppLocalizations(localeProvider.locale); // ✅
+
     final isDark = themeProvider.currentTheme == AppTheme.dark;
     final isGirlie = themeProvider.currentTheme == AppTheme.girlie;
 
     return Scaffold(
-      appBar: const AppbarWidget(title: "Login"),
+      appBar: AppbarWidget(title: loc.translate('login')), // "تسجيل الدخول"
       backgroundColor: isDark
           ? const Color(0xFF0D0D0D)
           : isGirlie
-          ? const Color(0xFFFFF0F5)
-          : Colors.white,
+              ? const Color(0xFFFFF0F5)
+              : Colors.white,
       body: Positioned.fill(
         child: Stack(
           children: [
@@ -103,33 +106,34 @@ class _LoginPageState extends State<LoginPage> {
                     children: [
                       const Padding(padding: EdgeInsets.only(top: 50.0)),
                       Text(
-                        "Welcome back!              Again",
+                        loc.translate('welcome_back'), // "أهلاً بعودتك!"
                         style: AppStyles.primaryHeadLineStyle.copyWith(
                           color: isDark
                               ? Colors.white
                               : isGirlie
-                              ? const Color(0xFF8B008B)
-                              : AppStyles.primaryHeadLineStyle.color,
+                                  ? const Color(0xFF8B008B)
+                                  : AppStyles.primaryHeadLineStyle.color,
                         ),
                       ),
-                      Padding(padding: EdgeInsets.only(top: 20.0)),
+                      const Padding(padding: EdgeInsets.only(top: 20.0)),
 
                       PrimaryTextfieldWidget(
                         controller: _emailController,
-                        hintText: "Enter Your Email",
+                        hintText: loc.translate('enter_email'), // "أدخل بريدك الإلكتروني"
                         keyboardType: TextInputType.emailAddress,
-                        validator: (val) =>
-                            val!.contains('@') ? null : "Invalid Email",
+                        validator: (val) => val!.contains('@')
+                            ? null
+                            : loc.translate('invalid_email'), // "بريد غير صحيح"
                       ),
 
-                      Padding(padding: EdgeInsets.only(top: 20.0)),
+                      const Padding(padding: EdgeInsets.only(top: 20.0)),
 
                       PrimaryTextfieldWidget(
                         controller: _passwordController,
-                        hintText: "Enter Your Password",
+                        hintText: loc.translate('enter_password'), // "أدخل كلمة المرور"
                         keyboardType: TextInputType.visiblePassword,
-
-                        validator: (val) => val!.isEmpty ? "Required" : null,
+                        validator: (val) =>
+                            val!.isEmpty ? loc.translate('required') : null, // "مطلوب"
                       ),
 
                       Padding(padding: EdgeInsets.only(top: 30.0.h)),
@@ -137,8 +141,8 @@ class _LoginPageState extends State<LoginPage> {
                       isLoading
                           ? const CircularProgressIndicator()
                           : PrimaryButtonWidget(
-                              buttonText: "Login",
-                              onPressed: _handleLogin,
+                              buttonText: loc.translate('login'), // "دخول"
+                              onPressed: () => _handleLogin(loc),
                             ),
 
                       Padding(
@@ -150,7 +154,7 @@ class _LoginPageState extends State<LoginPage> {
                               context.go(AppRoutes.forgotPassword);
                             },
                             child: Text(
-                              "Forgot Password?",
+                              loc.translate('forgot_password'), // "نسيت كلمة المرور؟"
                               style: TextStyle(
                                 color: isDark ? Colors.white70 : Colors.black54,
                               ),
@@ -167,7 +171,7 @@ class _LoginPageState extends State<LoginPage> {
                               context.go(AppRoutes.home);
                             },
                             child: Text(
-                              "Home pages",
+                              loc.translate('home_pages'), // "الصفحة الرئيسية"
                               style: TextStyle(
                                 color: isDark ? Colors.white70 : Colors.black54,
                               ),
@@ -176,14 +180,13 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                       SocialLoginSection(
-                        mainText: "Or login with social account",
-                        promptText: "Don't have an account?",
-                        buttonText: "Register",
+                        mainText: loc.translate('or_social'), // "أو تابع عبر..."
+                        promptText: loc.translate('no_account'), // "ليس لديك حساب؟"
+                        buttonText: loc.translate('register'), // "إنشاء حساب"
                         onButtonPressed: () {
                           context.go(AppRoutes.register);
                         },
-                        // تأكد أنك عدلت SocialLoginSection لتستقبل هذا
-                        // onGooglePressed: _handleGoogleLogin,
+                        // onGooglePressed: () => _handleGoogleLogin(loc),
                       ),
                     ],
                   ),

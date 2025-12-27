@@ -1,3 +1,4 @@
+import 'package:flowmart/core/providers/locale_provider.dart'; // ✅
 import 'package:flowmart/core/providers/theme_provider.dart';
 import 'package:flowmart/core/routing/app_routing.dart';
 import 'package:flowmart/core/styling/app_styles.dart';
@@ -23,23 +24,23 @@ class _NewPasswordPageState extends State<NewPasswordPage> {
   final TextEditingController _confirmController = TextEditingController();
   bool isLoading = false;
 
-  void _handleUpdatePassword() async {
+  // ✅ تمرير loc لاستخدام الترجمة في التنبيهات
+  void _handleUpdatePassword(AppLocalizations loc) async {
     if (_formKey.currentState!.validate()) {
       setState(() => isLoading = true);
 
-      // محاكاة عملية التحديث (لأننا في وضع UI Flow)
+      // محاكاة عملية التحديث
       await Future.delayed(const Duration(seconds: 2));
 
       setState(() => isLoading = false);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Password Changed Successfully! Login now."),
+          SnackBar(
+            content: Text(loc.translate('pass_changed_success')), // "تم تغيير كلمة المرور..."
             backgroundColor: Colors.green,
           ),
         );
-        // العودة لصفحة تسجيل الدخول لإكمال الدورة
         context.go(AppRoutes.login);
       }
     }
@@ -55,11 +56,14 @@ class _NewPasswordPageState extends State<NewPasswordPage> {
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final localeProvider = Provider.of<LocaleProvider>(context); // ✅
+    final loc = AppLocalizations(localeProvider.locale); // ✅
+
     final isDark = themeProvider.currentTheme == AppTheme.dark;
     final isGirlie = themeProvider.currentTheme == AppTheme.girlie;
 
     return Scaffold(
-      appBar: const AppbarWidget(title: "New Password"),
+      appBar: AppbarWidget(title: loc.translate('new_password_title')), // "كلمة المرور الجديدة"
       backgroundColor: isDark
           ? const Color(0xFF0D0D0D)
           : isGirlie
@@ -76,7 +80,7 @@ class _NewPasswordPageState extends State<NewPasswordPage> {
                   children: [
                     const Padding(padding: EdgeInsets.only(top: 50.0)),
                     Text(
-                      "Reset Password",
+                      loc.translate('reset_password'), // "إعادة تعيين كلمة المرور"
                       style: AppStyles.primaryHeadLineStyle.copyWith(
                         color: isDark
                             ? Colors.white
@@ -89,7 +93,7 @@ class _NewPasswordPageState extends State<NewPasswordPage> {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 30.0),
                       child: Text(
-                        "Please enter your new password securely.",
+                        loc.translate('new_pass_msg'), // "يرجى إدخال كلمة المرور الجديدة..."
                         textAlign: TextAlign.center,
                         style: AppStyles.supTitleStyle.copyWith(
                           color: isDark ? Colors.grey : Colors.grey[600],
@@ -102,10 +106,11 @@ class _NewPasswordPageState extends State<NewPasswordPage> {
                     // حقل كلمة السر الجديدة
                     PrimaryTextfieldWidget(
                       controller: _passController,
-                      hintText: "New Password",
+                      hintText: loc.translate('new_pass_hint'), // "كلمة المرور الجديدة"
                       keyboardType: TextInputType.visiblePassword,
-                      validator: (val) =>
-                          val!.length < 6 ? "Min 6 characters" : null,
+                      validator: (val) => val!.length < 6
+                          ? loc.translate('pass_min_length') // "6 أحرف على الأقل"
+                          : null,
                     ),
 
                     const Padding(padding: EdgeInsets.only(top: 20.0)),
@@ -113,12 +118,13 @@ class _NewPasswordPageState extends State<NewPasswordPage> {
                     // حقل تأكيد كلمة السر
                     PrimaryTextfieldWidget(
                       controller: _confirmController,
-                      hintText: "Confirm Password",
+                      hintText: loc.translate('confirm_pass_hint'), // "تأكيد كلمة المرور"
                       keyboardType: TextInputType.visiblePassword,
                       validator: (val) {
-                        if (val!.isEmpty) return "Required";
-                        if (val != _passController.text)
-                          return "Passwords do not match";
+                        if (val!.isEmpty) return loc.translate('required'); // "مطلوب"
+                        if (val != _passController.text) {
+                          return loc.translate('pass_mismatch'); // "كلمتا المرور غير متطابقتين"
+                        }
                         return null;
                       },
                     ),
@@ -128,8 +134,8 @@ class _NewPasswordPageState extends State<NewPasswordPage> {
                     isLoading
                         ? const CircularProgressIndicator()
                         : PrimaryButtonWidget(
-                            buttonText: "Update Password",
-                            onPressed: _handleUpdatePassword,
+                            buttonText: loc.translate('update_pass_btn'), // "تحديث كلمة المرور"
+                            onPressed: () => _handleUpdatePassword(loc),
                           ),
                   ],
                 ),

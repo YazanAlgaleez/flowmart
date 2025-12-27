@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart'; // ✅ أضفنا هذا للاتصال بـ flowmart
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flowmart/core/providers/locale_provider.dart'; // ✅
 import 'package:flowmart/core/providers/theme_provider.dart';
 import 'package:flowmart/core/styling/app_themes.dart';
 import 'package:flutter/material.dart';
@@ -45,21 +46,17 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
-  // ✅ تعديل دالة الإرسال لتدعم السجل والاسم
   void sendMessage() async {
     if (_messageController.text.trim().isNotEmpty) {
       String messageText = _messageController.text.trim();
-      _messageController.clear(); // مسح الحقل فوراً لتجربة مستخدم أفضل
-
-      // استخراج الاسم من الإيميل (أو اسم الناشر)
+      _messageController.clear();
       String receiverName = widget.receiverUserEmail.split('@')[0];
 
       await _chatService.sendMessage(
         widget.receiverUserID,
         messageText,
-        receiverName, // مررنا الاسم ليحفظ في سجل المحادثات
+        receiverName,
       );
-
       _scrollToBottom();
     }
   }
@@ -67,13 +64,17 @@ class _ChatPageState extends State<ChatPage> {
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final localeProvider = Provider.of<LocaleProvider>(context); // ✅
+    final loc = AppLocalizations(localeProvider.locale); // ✅
+
     final currentTheme = themeProvider.currentTheme;
     final bool isDark = currentTheme == AppTheme.dark;
     final bool isGirlie = currentTheme == AppTheme.girlie;
-    final Color mainColor = isGirlie ? Colors.pink : Colors.blueAccent;
+    final Color mainColor =
+        isGirlie ? const Color(0xFFFF4081) : Colors.blueAccent;
     final Color receiverBubbleColor = isDark
         ? Colors.grey[800]!
-        : (isGirlie ? Colors.pink[50]! : Colors.grey[200]!);
+        : (isGirlie ? const Color(0xFFFFF0F5) : Colors.grey[200]!);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -92,13 +93,13 @@ class _ChatPageState extends State<ChatPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  widget.receiverUserEmail.split('@')[0], // اسم الناشر
+                  widget.receiverUserEmail.split('@')[0],
                   style: TextStyle(
                       fontSize: 16.sp,
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).textTheme.bodyLarge?.color),
                 ),
-                Text('متصل الآن',
+                Text(loc.translate('online'), // "متصل الآن"
                     style: TextStyle(color: Colors.green, fontSize: 11.sp)),
               ],
             ),
@@ -108,18 +109,18 @@ class _ChatPageState extends State<ChatPage> {
       body: Column(
         children: [
           if (widget.productDetails != null)
-            _buildProductCard(isDark, mainColor),
+            _buildProductCard(isDark, mainColor, loc),
           Expanded(
-            child: _buildMessageList(mainColor, receiverBubbleColor, isDark),
+            child:
+                _buildMessageList(mainColor, receiverBubbleColor, isDark, loc),
           ),
-          _buildMessageInput(isDark, mainColor),
+          _buildMessageInput(isDark, mainColor, loc),
         ],
       ),
     );
   }
 
-  // 🔥 بطاقة المنتج (التي تظهر في أعلى المحادثة)
-  Widget _buildProductCard(bool isDark, Color mainColor) {
+  Widget _buildProductCard(bool isDark, Color mainColor, AppLocalizations loc) {
     final product = widget.productDetails!;
     return Container(
       width: double.infinity,
@@ -149,10 +150,11 @@ class _ChatPageState extends State<ChatPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("بخصوص: ${product['name']}",
+                Text(
+                    "${loc.translate('about_product')} ${product['name']}", // "بخصوص:"
                     style: TextStyle(
                         fontWeight: FontWeight.bold, fontSize: 13.sp)),
-                Text("${product['price']} JOD",
+                Text("${product['price']} ${loc.translate('jod')}", // "دينار"
                     style: TextStyle(
                         color: mainColor,
                         fontWeight: FontWeight.bold,
@@ -165,14 +167,11 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  Widget _buildMessageList(
-      Color mainColor, Color receiverBubbleColor, bool isDark) {
-    // ✅ القراءة من قاعدة flowmart مباشرة
+  Widget _buildMessageList(Color mainColor, Color receiverBubbleColor,
+      bool isDark, AppLocalizations loc) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instanceFor(
-        app: Firebase.app(),
-        databaseId: 'flowmart',
-      )
+              app: Firebase.app(), databaseId: 'flowmart')
           .collection('chat_rooms')
           .doc(_getChatRoomId(
               widget.receiverUserID, _firebaseAuth.currentUser!.uid))
@@ -181,7 +180,7 @@ class _ChatPageState extends State<ChatPage> {
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError)
-          return const Center(child: Text('حدث خطأ في تحميل الرسائل'));
+          return Center(child: Text(loc.translate('error')));
         if (snapshot.connectionState == ConnectionState.waiting)
           return const Center(child: CircularProgressIndicator());
 
@@ -200,7 +199,6 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  // دالة مساعدة للحصول على معرف الغرفة (نفس المنطق في الخدمة)
   String _getChatRoomId(String user1, String user2) {
     List<String> ids = [user1, user2];
     ids.sort();
@@ -212,6 +210,7 @@ class _ChatPageState extends State<ChatPage> {
     Map<String, dynamic> data = document.data() as Map<String, dynamic>;
     bool isCurrentUser = (data['senderId'] == _firebaseAuth.currentUser!.uid);
     Timestamp? timestamp = data['timestamp'];
+    // تنسيق الوقت حسب لغة الجهاز (يمكن ربطه بالـ localeProvider لاحقاً إذا أردت)
     String formattedTime = timestamp != null
         ? DateFormat('hh:mm a').format(timestamp.toDate())
         : '';
@@ -257,7 +256,8 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  Widget _buildMessageInput(bool isDark, Color mainColor) {
+  Widget _buildMessageInput(
+      bool isDark, Color mainColor, AppLocalizations loc) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 12.h),
       decoration: BoxDecoration(
@@ -275,7 +275,7 @@ class _ChatPageState extends State<ChatPage> {
                 controller: _messageController,
                 style: TextStyle(color: isDark ? Colors.white : Colors.black),
                 decoration: InputDecoration(
-                  hintText: 'اكتب رسالتك...',
+                  hintText: loc.translate('type_message'), // "اكتب رسالتك..."
                   filled: true,
                   fillColor: isDark ? Colors.grey[850] : Colors.grey[100],
                   border: OutlineInputBorder(

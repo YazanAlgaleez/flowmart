@@ -1,7 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flowmart/core/providers/locale_provider.dart'; // ✅ استيراد ملف اللغة
 import 'package:flowmart/core/providers/theme_provider.dart';
 import 'package:flowmart/core/routing/app_routing.dart';
 import 'package:flowmart/core/styling/app_themes.dart';
+import 'package:flowmart/core/widgets/build_list_tile.dart';
+import 'package:flowmart/pages/my_products_page.dart';
+import 'package:flowmart/pages/settings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -11,10 +15,17 @@ class DrawerWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 1. جلب بيانات الثيم
     final themeProvider = Provider.of<ThemeProvider>(context);
+
+    // ✅ 2. جلب بيانات اللغة
+    final localeProvider = Provider.of<LocaleProvider>(context);
+    final loc = AppLocalizations(localeProvider.locale);
+
     final isDark = themeProvider.currentTheme == AppTheme.dark;
     final isGirlie = themeProvider.currentTheme == AppTheme.girlie;
 
+    // 3. تحديد الألوان
     final Color backgroundColor = isDark
         ? const Color(0xFF0D0D0D)
         : isGirlie
@@ -24,13 +35,13 @@ class DrawerWidget extends StatelessWidget {
     final Color headerColor = isDark
         ? const Color(0xFF1A1A1A)
         : isGirlie
-            ? const Color(0xFFFF69B4)
+            ? const Color(0xFFFF80AB)
             : Colors.blue;
 
     final Color itemsColor = isDark
         ? Colors.white
         : isGirlie
-            ? const Color(0xFF8B008B)
+            ? const Color(0xFF880E4F)
             : Colors.black;
 
     return Drawer(
@@ -47,19 +58,24 @@ class DrawerWidget extends StatelessWidget {
                 child: ListView(
                   padding: EdgeInsets.zero,
                   children: <Widget>[
+                    // --- رأس القائمة (Header) ---
                     UserAccountsDrawerHeader(
                       decoration: BoxDecoration(color: headerColor),
                       accountName: Text(
                         isLoggedIn
-                            ? (user.displayName ?? "No Name")
-                            : "Guest User",
+                            ? (user.displayName ??
+                                loc.translate('user')) // "مستخدم"
+                            : loc.translate('guest'), // "زائر"
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 18,
                         ),
                       ),
                       accountEmail: Text(
-                        isLoggedIn ? (user.email ?? "") : "Welcome to FlowMart",
+                        isLoggedIn
+                            ? (user.email ?? "")
+                            : loc
+                                .translate('welcome'), // "أهلاً بك في FlowMart"
                         style: const TextStyle(color: Colors.white70),
                       ),
                       currentAccountPicture: CircleAvatar(
@@ -74,24 +90,27 @@ class DrawerWidget extends StatelessWidget {
                                     : "U",
                                 style: TextStyle(
                                   fontSize: 24,
+                                  fontWeight: FontWeight.bold,
                                   color: headerColor,
                                 ),
                               )
                             : Icon(Icons.person, color: headerColor, size: 30),
                       ),
                     ),
-                    _buildListTile(
+
+                    // --- عناصر القائمة ---
+                    BuildListTile(
                       icon: Icons.home,
-                      title: 'Home',
+                      title: loc.translate('home'), // "الرئيسية"
                       color: itemsColor,
                       onTap: () {
                         Navigator.pop(context);
                         context.go(AppRoutes.home);
                       },
                     ),
-                    _buildListTile(
+                    BuildListTile(
                       icon: Icons.search,
-                      title: 'Search',
+                      title: loc.translate('search'), // "البحث"
                       color: itemsColor,
                       onTap: () {
                         Navigator.pop(context);
@@ -99,35 +118,58 @@ class DrawerWidget extends StatelessWidget {
                       },
                     ),
 
-                    // =============== هنا التعديل لتفعيل الزر ===============
-                    _buildListTile(
-                      icon: Icons.chat,
-                      title: 'Chat History',
-                      color: itemsColor,
-                      onTap: () {
-                        Navigator.pop(context); // إغلاق القائمة
-                        // استخدمنا push لكي يستطيع المستخدم الرجوع للخلف
-                        context.push(AppRoutes.chatHistory);
-                      },
-                    ),
-                    // ====================================================
+                    // ✅ زر "منتجاتي"
+                    if (isLoggedIn)
+                      BuildListTile(
+                        icon: Icons.inventory_2_outlined,
+                        title: loc.translate('my_products'), // "منتجاتي"
+                        color: itemsColor,
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) =>
+                                      const MyProductsPage()));
+                        },
+                      ),
 
-                    _buildListTile(
+                    // ✅ زر "المحادثات"
+                    if (isLoggedIn)
+                      BuildListTile(
+                        icon: Icons.chat,
+                        title: loc.translate('chats'), // "المحادثات"
+                        color: itemsColor,
+                        onTap: () {
+                          Navigator.pop(context);
+                          context.push(AppRoutes.chatHistory);
+                        },
+                      ),
+
+                    // ✅ زر "الإعدادات"
+                    BuildListTile(
                       icon: Icons.settings,
-                      title: 'Settings',
+                      title: loc.translate('settings'), // "الإعدادات"
                       color: itemsColor,
                       onTap: () {
                         Navigator.pop(context);
-                        // context.push(AppRoutes.settings); // فعله لاحقاً عند إنشاء الصفحة
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => const SettingsPage()));
                       },
                     ),
                   ],
                 ),
               ),
               Divider(color: itemsColor.withOpacity(0.2)),
-              _buildListTile(
+
+              // --- زر تسجيل الدخول / الخروج ---
+              BuildListTile(
                 icon: isLoggedIn ? Icons.logout : Icons.login,
-                title: isLoggedIn ? 'Log Out' : 'Log In',
+                title: isLoggedIn
+                    ? loc.translate('logout') // "تسجيل الخروج"
+                    : loc.translate('login'), // "تسجيل الدخول"
                 color: isLoggedIn ? Colors.red : itemsColor,
                 onTap: () async {
                   Navigator.pop(context);
@@ -136,9 +178,9 @@ class DrawerWidget extends StatelessWidget {
                     if (context.mounted) {
                       context.go(AppRoutes.login);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Logged out successfully"),
-                        ),
+                        SnackBar(
+                            content: Text(loc.translate(
+                                'logout_confirm'))), // "تم تسجيل الخروج"
                       );
                     }
                   } else {
@@ -151,19 +193,6 @@ class DrawerWidget extends StatelessWidget {
           );
         },
       ),
-    );
-  }
-
-  Widget _buildListTile({
-    required IconData icon,
-    required String title,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return ListTile(
-      leading: Icon(icon, color: color),
-      title: Text(title, style: TextStyle(color: color, fontSize: 16)),
-      onTap: onTap,
     );
   }
 }

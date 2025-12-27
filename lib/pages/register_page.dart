@@ -1,3 +1,4 @@
+import 'package:flowmart/core/providers/locale_provider.dart'; // ✅
 import 'package:flowmart/core/providers/theme_provider.dart';
 import 'package:flowmart/core/routing/app_routing.dart';
 import 'package:flowmart/core/styling/app_styles.dart';
@@ -12,7 +13,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -30,7 +30,8 @@ class _RegisterPageState extends State<RegisterPage> {
 
   bool isLoading = false;
 
-  void _handleRegister() async {
+  // ✅ تمرير loc لاستخدام الترجمة في التنبيهات
+  void _handleRegister(AppLocalizations loc) async {
     if (_formKey.currentState!.validate()) {
       setState(() => isLoading = true);
 
@@ -45,7 +46,8 @@ class _RegisterPageState extends State<RegisterPage> {
       if (result == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Account Created Successfully!")),
+            SnackBar(
+                content: Text(loc.translate('account_created'))), // "تم إنشاء الحساب بنجاح"
           );
           context.go(AppRoutes.login);
         }
@@ -74,11 +76,14 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final localeProvider = Provider.of<LocaleProvider>(context); // ✅
+    final loc = AppLocalizations(localeProvider.locale); // ✅
+
     final isDark = themeProvider.currentTheme == AppTheme.dark;
     final isGirlie = themeProvider.currentTheme == AppTheme.girlie;
 
     return Scaffold(
-      appBar: const AppbarWidget(title: "Register"),
+      appBar: AppbarWidget(title: loc.translate('register')), // "تسجيل"
       backgroundColor: isDark
           ? const Color(0xFF0D0D0D)
           : isGirlie
@@ -96,7 +101,8 @@ class _RegisterPageState extends State<RegisterPage> {
                     children: [
                       const Padding(padding: EdgeInsets.only(top: 50.0)),
                       Text(
-                        "Hello ! Register to get             started",
+                        loc.translate('register_welcome'), // "مرحباً! سجل لتبدأ"
+                        textAlign: TextAlign.center,
                         style: AppStyles.primaryHeadLineStyle.copyWith(
                           color: isDark
                               ? Colors.white
@@ -106,47 +112,59 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                       ),
                       Padding(padding: EdgeInsets.only(top: 12.0.h)),
+                      
+                      // حقل اسم المستخدم
                       PrimaryTextfieldWidget(
                         controller: _usernameController,
-                        hintText: "Username",
+                        hintText: loc.translate('username'), // "اسم المستخدم"
                         keyboardType: TextInputType.name,
-                        validator: (val) => val!.isEmpty ? "Required" : null,
+                        validator: (val) =>
+                            val!.isEmpty ? loc.translate('required') : null, // "مطلوب"
                       ),
                       Padding(padding: EdgeInsets.only(top: 12.0.h)),
+                      
+                      // حقل الإيميل
                       PrimaryTextfieldWidget(
                         controller: _emailController,
-                        hintText: "Email",
+                        hintText: loc.translate('enter_email'), // "أدخل الإيميل"
                         keyboardType: TextInputType.emailAddress,
-                        validator: (val) =>
-                            val!.contains('@') ? null : "Invalid Email",
+                        validator: (val) => val!.contains('@')
+                            ? null
+                            : loc.translate('invalid_email'), // "إيميل غير صحيح"
                       ),
                       Padding(padding: EdgeInsets.only(top: 12.0.h)),
+                      
+                      // حقل كلمة المرور
                       PrimaryTextfieldWidget(
                         controller: _passwordController,
-                        hintText: "Password",
+                        hintText: loc.translate('password'), // "كلمة المرور"
                         keyboardType: TextInputType.visiblePassword,
-                      
-                        validator: (val) =>
-                            val!.length < 6 ? "Min 6 characters" : null,
+                        validator: (val) => val!.length < 6
+                            ? loc.translate('pass_min_length') // "6 أحرف على الأقل"
+                            : null,
                       ),
                       Padding(padding: EdgeInsets.only(top: 12.0.h)),
+                      
+                      // حقل تأكيد كلمة المرور
                       PrimaryTextfieldWidget(
                         controller: _confirmPassController,
-                        hintText: "Confirm Password",
+                        hintText: loc.translate('confirm_pass_hint'), // "تأكيد كلمة المرور"
                         keyboardType: TextInputType.visiblePassword,
-                      
                         validator: (val) {
-                          if (val!.isEmpty) return "Required";
-                          if (val != _passwordController.text) return "No Match";
+                          if (val!.isEmpty) return loc.translate('required');
+                          if (val != _passwordController.text) {
+                            return loc.translate('pass_no_match'); // "غير متطابقتين"
+                          }
                           return null;
                         },
                       ),
                       Padding(padding: EdgeInsets.only(top: 30.0.h)),
+                      
                       isLoading
                           ? const CircularProgressIndicator()
                           : PrimaryButtonWidget(
-                              buttonText: "Register",
-                              onPressed: _handleRegister,
+                              buttonText: loc.translate('register'), // "إنشاء حساب"
+                              onPressed: () => _handleRegister(loc),
                             ),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -157,7 +175,7 @@ class _RegisterPageState extends State<RegisterPage> {
                               context.go(AppRoutes.home);
                             },
                             child: Text(
-                              "Home pages",
+                              loc.translate('home_pages'), // "الصفحة الرئيسية"
                               style: TextStyle(
                                 color: isDark ? Colors.white70 : Colors.black54,
                               ),
@@ -166,9 +184,9 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                       ),
                       SocialLoginSection(
-                        mainText: "Or register with social account",
-                        promptText: "Already have an account?",
-                        buttonText: "Login",
+                        mainText: loc.translate('or_register_social'), // "أو سجل عبر..."
+                        promptText: loc.translate('have_account'), // "لديك حساب؟"
+                        buttonText: loc.translate('login'), // "دخول"
                         onButtonPressed: () {
                           context.go(AppRoutes.login);
                         },

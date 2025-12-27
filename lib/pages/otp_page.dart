@@ -1,4 +1,5 @@
 import 'package:email_otp/email_otp.dart';
+import 'package:flowmart/core/providers/locale_provider.dart'; // ✅
 import 'package:flowmart/core/providers/theme_provider.dart';
 import 'package:flowmart/core/routing/app_routing.dart';
 import 'package:flowmart/core/styling/app_styles.dart';
@@ -33,38 +34,31 @@ class _OtpPageState extends State<OtpPage> {
 
   @override
   void dispose() {
-    _c1.dispose();
-    _c2.dispose();
-    _c3.dispose();
-    _c4.dispose();
-    _f1.dispose();
-    _f2.dispose();
-    _f3.dispose();
-    _f4.dispose();
+    _c1.dispose(); _c2.dispose(); _c3.dispose(); _c4.dispose();
+    _f1.dispose(); _f2.dispose(); _f3.dispose(); _f4.dispose();
     super.dispose();
   }
 
-  void _verifyOtp() {
+  // ✅ تمرير loc لاستخدام الترجمة
+  void _verifyOtp(AppLocalizations loc) {
     String otpCode = "${_c1.text}${_c2.text}${_c3.text}${_c4.text}";
 
     // التحقق اليدوي (Dev Mode Bypass: 1234)
     if (otpCode == "1234") {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Verified Successfully!"),
+          SnackBar(
+            content: Text(loc.translate('otp_verified')), // "تم التحقق بنجاح"
             backgroundColor: Colors.green,
           ),
         );
-
-        // الانتقال لصفحة كلمة السر الجديدة
         context.push(AppRoutes.newPassword);
       }
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Invalid Code (Try 1234)"),
+          SnackBar(
+            content: Text(loc.translate('otp_invalid')), // "رمز غير صحيح"
             backgroundColor: Colors.red,
           ),
         );
@@ -75,6 +69,9 @@ class _OtpPageState extends State<OtpPage> {
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final localeProvider = Provider.of<LocaleProvider>(context); // ✅
+    final loc = AppLocalizations(localeProvider.locale); // ✅
+
     final isDark = themeProvider.currentTheme == AppTheme.dark;
     final isGirlie = themeProvider.currentTheme == AppTheme.girlie;
 
@@ -85,7 +82,7 @@ class _OtpPageState extends State<OtpPage> {
             : Colors.black;
 
     return Scaffold(
-      appBar: const AppbarWidget(title: "OTP Verification"),
+      appBar: AppbarWidget(title: loc.translate('otp_title')), // "التحقق من الرمز"
       backgroundColor: isDark
           ? const Color(0xFF0D0D0D)
           : isGirlie
@@ -98,15 +95,14 @@ class _OtpPageState extends State<OtpPage> {
               children: [
                 const Padding(padding: EdgeInsets.only(top: 50.0)),
                 Text(
-                  "Email Verification",
-                  style:
-                      AppStyles.primaryHeadLineStyle.copyWith(color: textColor),
+                  loc.translate('email_verification'), // "تأكيد البريد"
+                  style: AppStyles.primaryHeadLineStyle.copyWith(color: textColor),
                 ),
                 const Padding(padding: EdgeInsets.only(top: 15.0)),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 30.0),
                   child: Text(
-                    "Please enter the code sent to your email (Dev Mode: 1234).",
+                    loc.translate('otp_msg'), // "يرجى إدخال الرمز..."
                     textAlign: TextAlign.center,
                     style: AppStyles.supTitleStyle.copyWith(
                       color: isDark ? Colors.grey : Colors.grey[600],
@@ -114,33 +110,37 @@ class _OtpPageState extends State<OtpPage> {
                   ),
                 ),
                 SizedBox(height: 40.h),
+                // اتجاه الحقول سيتغير تلقائياً مع اللغة (RTL/LTR)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 40.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _buildOtpBox(context, _c1, _f1, _f2, isDark, isGirlie),
-                      _buildOtpBox(context, _c2, _f2, _f3, isDark, isGirlie),
-                      _buildOtpBox(context, _c3, _f3, _f4, isDark, isGirlie),
-                      _buildOtpBox(context, _c4, _f4, null, isDark, isGirlie),
-                    ],
+                  child: Directionality(
+                    textDirection: TextDirection.ltr, // الرموز والأرقام دائماً LTR
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildOtpBox(context, _c1, _f1, _f2, isDark, isGirlie),
+                        _buildOtpBox(context, _c2, _f2, _f3, isDark, isGirlie),
+                        _buildOtpBox(context, _c3, _f3, _f4, isDark, isGirlie),
+                        _buildOtpBox(context, _c4, _f4, null, isDark, isGirlie),
+                      ],
+                    ),
                   ),
                 ),
                 SizedBox(height: 40.h),
                 PrimaryButtonWidget(
-                  buttonText: "Verify Code",
-                  onPressed: _verifyOtp,
+                  buttonText: loc.translate('verify_btn'), // "تحقق من الرمز"
+                  onPressed: () => _verifyOtp(loc),
                 ),
                 Padding(
                   padding: const EdgeInsets.only(top: 20.0),
                   child: TextButton(
                     onPressed: () {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Code resent! (1234)")),
+                        SnackBar(content: Text(loc.translate('otp_resent'))), // "تم إعادة الإرسال"
                       );
                     },
                     child: Text(
-                      "Resend Code",
+                      loc.translate('resend_code'), // "إعادة إرسال الرمز"
                       style: TextStyle(
                         color: isDark ? Colors.white70 : Colors.blue,
                         decoration: TextDecoration.underline,

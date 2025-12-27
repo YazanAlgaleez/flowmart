@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flowmart/core/providers/locale_provider.dart'; // ✅ استيراد ملف اللغة
 import 'package:flowmart/core/providers/product_provider.dart';
 import 'package:flowmart/core/providers/theme_provider.dart';
 import 'package:flowmart/core/routing/app_routing.dart';
@@ -24,28 +25,45 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+// 1. استخدام AutomaticKeepAliveClientMixin للحفاظ على حالة الصفحة
+class _HomePageState extends State<HomePage>
+    with AutomaticKeepAliveClientMixin {
   final PageController _pageController = PageController();
 
-  // ✅ دالة إظهار تنبيه تسجيل الدخول
-  void _showLoginWarning(BuildContext context) {
+  // 2. متغير لتخزين الستريم لمنع إعادة تحميله
+  late Stream<QuerySnapshot> _productsStream;
+
+  @override
+  void initState() {
+    super.initState();
+    // 3. تعريف الستريم مرة واحدة فقط عند بدء الصفحة
+    _productsStream = FirebaseFirestore.instanceFor(
+      app: Firebase.app(),
+      databaseId: 'flowmart',
+    ).collection('products').orderBy('createdAt', descending: true).snapshots();
+  }
+
+  // 4. تفعيل الحفاظ على الحالة
+  @override
+  bool get wantKeepAlive => true;
+
+  // ✅ تمرير loc للترجمة
+  void _showLoginWarning(BuildContext context, AppLocalizations loc) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("تسجيل الدخول مطلوب"),
-        content:
-            const Text("يرجى تسجيل الدخول لتتمكن من التفاعل ومراسلة الناشرين."),
+        title: Text(loc.translate('login_required')), // "تسجيل الدخول مطلوب"
+        content: Text(loc.translate('login_msg')), // "يرجى تسجيل الدخول..."
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("إلغاء"),
-          ),
+              onPressed: () => Navigator.pop(context),
+              child: Text(loc.translate('cancel'))), // "إلغاء"
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               context.push(AppRoutes.login);
             },
-            child: const Text("دخول"),
+            child: Text(loc.translate('login')), // "دخول"
           ),
         ],
       ),
@@ -54,41 +72,91 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // 5. ضروري جداً لعمل KeepAlive
+
     final themeProvider = Provider.of<ThemeProvider>(context);
     final productProvider = Provider.of<ProductProvider>(context);
+    // ✅ استدعاء الترجمة
+    final localeProvider = Provider.of<LocaleProvider>(context);
+    final loc = AppLocalizations(localeProvider.locale);
+
     final isDark = themeProvider.currentTheme == AppTheme.dark;
+    final isGirlie = themeProvider.currentTheme == AppTheme.girlie;
+
+    final Color backgroundColor = isDark
+        ? const Color(0xFF0D0D0D)
+        : isGirlie
+            ? const Color(0xFFFFF0F5)
+            : Colors.white;
+
+    final List<Color> fabGradient = isGirlie
+        ? [const Color(0xFFFF80AB), const Color(0xFFFF4081)]
+        : [const Color(0xFFFF512F), const Color(0xFFDD2476)];
+
+    final Color fabShadowColor = isGirlie
+        ? const Color(0xFFFF4081).withOpacity(0.5)
+        : const Color(0xFFDD2476).withOpacity(0.5);
+
     final user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
       drawer: const DrawerWidget(),
-      backgroundColor: isDark ? const Color(0xFF0D0D0D) : Colors.white,
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push(AppRoutes.upload),
-        backgroundColor: Colors.redAccent,
-        child: const Icon(Icons.add_a_photo, color: Colors.white),
+      backgroundColor: backgroundColor,
+      floatingActionButton: Align(
+        alignment: Alignment.bottomCenter,
+        child: Padding(
+          padding: EdgeInsets.only(bottom: 16.h),
+          child: GestureDetector(
+            onTap: () {
+              if (user == null) {
+                _showLoginWarning(context, loc); // ✅
+              } else {
+                context.push(AppRoutes.upload);
+              }
+            },
+            child: Container(
+              width: 70.w,
+              height: 70.w,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: fabGradient,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: fabShadowColor,
+                    blurRadius: 18,
+                    spreadRadius: 2,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.add_a_photo_outlined,
+                  color: Colors.white, size: 30),
+            ),
+          ),
+        ),
       ),
       body: Stack(
         children: [
+          // 6. استخدام المتغير المخزن
           StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instanceFor(
-              app: Firebase.app(),
-              databaseId: 'flowmart',
-            )
-                .collection('products')
-                .orderBy('createdAt', descending: true)
-                .snapshots(),
+            stream: _productsStream,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
               }
-
               if (snapshot.hasError) {
                 return Center(
-                    child: Text("خطأ في جلب البيانات: ${snapshot.error}"));
+                    child: Text(
+                        "${loc.translate('error_snapshot')} ${snapshot.error}")); // "خطأ..."
               }
-
               if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                return const Center(child: Text("لا يوجد منتجات حالياً"));
+                return Center(
+                    child:
+                        Text(loc.translate('no_products'))); // "لا توجد منتجات"
               }
 
               final docs = snapshot.data!.docs;
@@ -100,18 +168,24 @@ class _HomePageState extends State<HomePage> {
                 itemBuilder: (context, index) {
                   final data = docs[index].data() as Map<String, dynamic>;
 
-                  // ✅ الحل النهائي: تحويل القيم لنصوص باستخدام .toString() لتجنب خطأ الـ int
                   final String sellerId = (data['sellerId'] ?? '').toString();
-                  final String sellerName =
-                      (data['sellerName'] ?? 'ناشر غير معروف').toString();
+                  final String sellerName = (data['sellerName'] ??
+                          loc.translate(
+                              'unknown_publisher')) // "ناشر غير معروف"
+                      .toString();
                   final String productId = docs[index].id.toString();
+                  final String productName = (data['name'] ?? '').toString();
+                  final String productDesc =
+                      (data['description'] ?? '').toString();
+                  final String productImg = (data['imageUrl'] ?? '').toString();
+                  final double productPrice = (data['price'] ?? 0).toDouble();
 
                   final product = Product(
                     id: productId,
-                    name: (data['name'] ?? '').toString(),
-                    price: (data['price'] ?? 0).toDouble(),
-                    imageUrl: (data['imageUrl'] ?? '').toString(),
-                    description: (data['description'] ?? '').toString(),
+                    name: productName,
+                    price: productPrice,
+                    imageUrl: productImg,
+                    description: productDesc,
                   );
 
                   return Dismissible(
@@ -119,7 +193,7 @@ class _HomePageState extends State<HomePage> {
                     direction: DismissDirection.horizontal,
                     confirmDismiss: (direction) async {
                       if (user == null) {
-                        _showLoginWarning(context);
+                        _showLoginWarning(context, loc); // ✅
                       } else {
                         context.push(AppRoutes.chat, extra: {
                           'receiverUserID': sellerId,
@@ -143,14 +217,14 @@ class _HomePageState extends State<HomePage> {
                           productProvider.likedProducts.contains(productId),
                       onLike: () {
                         if (user == null) {
-                          _showLoginWarning(context);
+                          _showLoginWarning(context, loc); // ✅
                         } else {
                           productProvider.toggleLike(productId);
                         }
                       },
                       onChat: () {
                         if (user == null) {
-                          _showLoginWarning(context);
+                          _showLoginWarning(context, loc); // ✅
                         } else {
                           context.push(AppRoutes.chat, extra: {
                             'receiverUserID': sellerId,
@@ -165,14 +239,11 @@ class _HomePageState extends State<HomePage> {
                       },
                       onArTap: () {
                         Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const ArViewPage(
-                              modelUrl:
-                                  'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
-                            ),
-                          ),
-                        );
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => const ArViewPage(
+                                    modelUrl:
+                                        'https://modelviewer.dev/shared-assets/models/Astronaut.glb')));
                       },
                       onComment: () {},
                     ),
